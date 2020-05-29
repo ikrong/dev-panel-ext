@@ -802,12 +802,12 @@ var DevPanel = (function () {
 	  /**
 	   * Show production mode tip message on boot?
 	   */
-	  productionTip: "" !== 'production',
+	  productionTip: "production" !== 'production',
 
 	  /**
 	   * Whether to enable devtools
 	   */
-	  devtools: "" !== 'production',
+	  devtools: "production" !== 'production',
 
 	  /**
 	   * Whether to record perf
@@ -1021,96 +1021,6 @@ var DevPanel = (function () {
 	/*  */
 
 	var warn = noop;
-	var tip = noop;
-	var generateComponentTrace = (noop); // work around flow check
-	var formatComponentName = (noop);
-
-	{
-	  var hasConsole = typeof console !== 'undefined';
-	  var classifyRE = /(?:^|[-_])(\w)/g;
-	  var classify = function (str) { return str
-	    .replace(classifyRE, function (c) { return c.toUpperCase(); })
-	    .replace(/[-_]/g, ''); };
-
-	  warn = function (msg, vm) {
-	    var trace = vm ? generateComponentTrace(vm) : '';
-
-	    if (config.warnHandler) {
-	      config.warnHandler.call(null, msg, vm, trace);
-	    } else if (hasConsole && (!config.silent)) {
-	      console.error(("[Vue warn]: " + msg + trace));
-	    }
-	  };
-
-	  tip = function (msg, vm) {
-	    if (hasConsole && (!config.silent)) {
-	      console.warn("[Vue tip]: " + msg + (
-	        vm ? generateComponentTrace(vm) : ''
-	      ));
-	    }
-	  };
-
-	  formatComponentName = function (vm, includeFile) {
-	    if (vm.$root === vm) {
-	      return '<Root>'
-	    }
-	    var options = typeof vm === 'function' && vm.cid != null
-	      ? vm.options
-	      : vm._isVue
-	        ? vm.$options || vm.constructor.options
-	        : vm;
-	    var name = options.name || options._componentTag;
-	    var file = options.__file;
-	    if (!name && file) {
-	      var match = file.match(/([^/\\]+)\.vue$/);
-	      name = match && match[1];
-	    }
-
-	    return (
-	      (name ? ("<" + (classify(name)) + ">") : "<Anonymous>") +
-	      (file && includeFile !== false ? (" at " + file) : '')
-	    )
-	  };
-
-	  var repeat = function (str, n) {
-	    var res = '';
-	    while (n) {
-	      if (n % 2 === 1) { res += str; }
-	      if (n > 1) { str += str; }
-	      n >>= 1;
-	    }
-	    return res
-	  };
-
-	  generateComponentTrace = function (vm) {
-	    if (vm._isVue && vm.$parent) {
-	      var tree = [];
-	      var currentRecursiveSequence = 0;
-	      while (vm) {
-	        if (tree.length > 0) {
-	          var last = tree[tree.length - 1];
-	          if (last.constructor === vm.constructor) {
-	            currentRecursiveSequence++;
-	            vm = vm.$parent;
-	            continue
-	          } else if (currentRecursiveSequence > 0) {
-	            tree[tree.length - 1] = [last, currentRecursiveSequence];
-	            currentRecursiveSequence = 0;
-	          }
-	        }
-	        tree.push(vm);
-	        vm = vm.$parent;
-	      }
-	      return '\n\nfound in\n\n' + tree
-	        .map(function (vm, i) { return ("" + (i === 0 ? '---> ' : repeat(' ', 5 + i * 2)) + (Array.isArray(vm)
-	            ? ((formatComponentName(vm[0])) + "... (" + (vm[1]) + " recursive calls)")
-	            : formatComponentName(vm))); })
-	        .join('\n')
-	    } else {
-	      return ("\n\n(found in " + (formatComponentName(vm)) + ")")
-	    }
-	  };
-	}
 
 	/*  */
 
@@ -1142,12 +1052,6 @@ var DevPanel = (function () {
 	Dep.prototype.notify = function notify () {
 	  // stabilize the subscriber list first
 	  var subs = this.subs.slice();
-	  if ( !config.async) {
-	    // subs aren't sorted in scheduler if not running async
-	    // we need to sort them now to make sure they fire in correct
-	    // order
-	    subs.sort(function (a, b) { return a.id - b.id; });
-	  }
 	  for (var i = 0, l = subs.length; i < l; i++) {
 	    subs[i].update();
 	  }
@@ -1462,10 +1366,6 @@ var DevPanel = (function () {
 	      if (newVal === value || (newVal !== newVal && value !== value)) {
 	        return
 	      }
-	      /* eslint-enable no-self-compare */
-	      if ( customSetter) {
-	        customSetter();
-	      }
 	      // #7981: for accessor properties without setter
 	      if (getter && !setter) { return }
 	      if (setter) {
@@ -1485,11 +1385,6 @@ var DevPanel = (function () {
 	 * already exist.
 	 */
 	function set (target, key, val) {
-	  if (
-	    (isUndef(target) || isPrimitive(target))
-	  ) {
-	    warn(("Cannot set reactive property on undefined, null, or primitive value: " + ((target))));
-	  }
 	  if (Array.isArray(target) && isValidArrayIndex(key)) {
 	    target.length = Math.max(target.length, key);
 	    target.splice(key, 1, val);
@@ -1501,10 +1396,6 @@ var DevPanel = (function () {
 	  }
 	  var ob = (target).__ob__;
 	  if (target._isVue || (ob && ob.vmCount)) {
-	     warn(
-	      'Avoid adding reactive properties to a Vue instance or its root $data ' +
-	      'at runtime - declare it upfront in the data option.'
-	    );
 	    return val
 	  }
 	  if (!ob) {
@@ -1520,21 +1411,12 @@ var DevPanel = (function () {
 	 * Delete a property and trigger change if necessary.
 	 */
 	function del (target, key) {
-	  if (
-	    (isUndef(target) || isPrimitive(target))
-	  ) {
-	    warn(("Cannot delete reactive property on undefined, null, or primitive value: " + ((target))));
-	  }
 	  if (Array.isArray(target) && isValidArrayIndex(key)) {
 	    target.splice(key, 1);
 	    return
 	  }
 	  var ob = (target).__ob__;
 	  if (target._isVue || (ob && ob.vmCount)) {
-	     warn(
-	      'Avoid deleting properties on a Vue instance or its root $data ' +
-	      '- just set it to null.'
-	    );
 	    return
 	  }
 	  if (!hasOwn(target, key)) {
@@ -1569,21 +1451,6 @@ var DevPanel = (function () {
 	 * value into the final value.
 	 */
 	var strats = config.optionMergeStrategies;
-
-	/**
-	 * Options with restrictions
-	 */
-	{
-	  strats.el = strats.propsData = function (parent, child, vm, key) {
-	    if (!vm) {
-	      warn(
-	        "option \"" + key + "\" can only be used during instance " +
-	        'creation with the `new` keyword.'
-	      );
-	    }
-	    return defaultStrat(parent, child)
-	  };
-	}
 
 	/**
 	 * Helper that recursively merges two data objects together.
@@ -1667,12 +1534,6 @@ var DevPanel = (function () {
 	) {
 	  if (!vm) {
 	    if (childVal && typeof childVal !== 'function') {
-	       warn(
-	        'The "data" option should be a function ' +
-	        'that returns a per-instance value in component ' +
-	        'definitions.',
-	        vm
-	      );
 
 	      return parentVal
 	    }
@@ -1730,7 +1591,6 @@ var DevPanel = (function () {
 	) {
 	  var res = Object.create(parentVal || null);
 	  if (childVal) {
-	     assertObjectType(key, childVal, vm);
 	    return extend(res, childVal)
 	  } else {
 	    return res
@@ -1758,9 +1618,6 @@ var DevPanel = (function () {
 	  if (childVal === nativeWatch) { childVal = undefined; }
 	  /* istanbul ignore if */
 	  if (!childVal) { return Object.create(parentVal || null) }
-	  {
-	    assertObjectType(key, childVal, vm);
-	  }
 	  if (!parentVal) { return childVal }
 	  var ret = {};
 	  extend(ret, parentVal);
@@ -1789,8 +1646,8 @@ var DevPanel = (function () {
 	  vm,
 	  key
 	) {
-	  if (childVal && "" !== 'production') {
-	    assertObjectType(key, childVal, vm);
+	  if (childVal && "production" !== 'production') {
+	    assertObjectType(key, childVal);
 	  }
 	  if (!parentVal) { return childVal }
 	  var ret = Object.create(null);
@@ -1810,30 +1667,6 @@ var DevPanel = (function () {
 	};
 
 	/**
-	 * Validate component names
-	 */
-	function checkComponents (options) {
-	  for (var key in options.components) {
-	    validateComponentName(key);
-	  }
-	}
-
-	function validateComponentName (name) {
-	  if (!new RegExp(("^[a-zA-Z][\\-\\.0-9_" + (unicodeRegExp.source) + "]*$")).test(name)) {
-	    warn(
-	      'Invalid component name: "' + name + '". Component names ' +
-	      'should conform to valid custom element name in html5 specification.'
-	    );
-	  }
-	  if (isBuiltInTag(name) || config.isReservedTag(name)) {
-	    warn(
-	      'Do not use built-in or reserved HTML elements as component ' +
-	      'id: ' + name
-	    );
-	  }
-	}
-
-	/**
 	 * Ensure all props option syntax are normalized into the
 	 * Object-based format.
 	 */
@@ -1849,8 +1682,6 @@ var DevPanel = (function () {
 	      if (typeof val === 'string') {
 	        name = camelize(val);
 	        res[name] = { type: null };
-	      } else {
-	        warn('props must be strings when using array syntax.');
 	      }
 	    }
 	  } else if (isPlainObject(props)) {
@@ -1861,12 +1692,6 @@ var DevPanel = (function () {
 	        ? val
 	        : { type: val };
 	    }
-	  } else {
-	    warn(
-	      "Invalid value for option \"props\": expected an Array or an Object, " +
-	      "but got " + (toRawType(props)) + ".",
-	      vm
-	    );
 	  }
 	  options.props = res;
 	}
@@ -1889,12 +1714,6 @@ var DevPanel = (function () {
 	        ? extend({ from: key }, val)
 	        : { from: val };
 	    }
-	  } else {
-	    warn(
-	      "Invalid value for option \"inject\": expected an Array or an Object, " +
-	      "but got " + (toRawType(inject)) + ".",
-	      vm
-	    );
 	  }
 	}
 
@@ -1917,9 +1736,7 @@ var DevPanel = (function () {
 	  if (!isPlainObject(value)) {
 	    warn(
 	      "Invalid value for option \"" + name + "\": expected an Object, " +
-	      "but got " + (toRawType(value)) + ".",
-	      vm
-	    );
+	      "but got " + (toRawType(value)) + ".");
 	  }
 	}
 
@@ -1932,16 +1749,13 @@ var DevPanel = (function () {
 	  child,
 	  vm
 	) {
-	  {
-	    checkComponents(child);
-	  }
 
 	  if (typeof child === 'function') {
 	    child = child.options;
 	  }
 
-	  normalizeProps(child, vm);
-	  normalizeInject(child, vm);
+	  normalizeProps(child);
+	  normalizeInject(child);
 	  normalizeDirectives(child);
 
 	  // Apply extends and mixins on the child options,
@@ -2000,12 +1814,6 @@ var DevPanel = (function () {
 	  if (hasOwn(assets, PascalCaseId)) { return assets[PascalCaseId] }
 	  // fallback to prototype chain
 	  var res = assets[id] || assets[camelizedId] || assets[PascalCaseId];
-	  if ( warnMissing && !res) {
-	    warn(
-	      'Failed to resolve ' + type.slice(0, -1) + ': ' + id,
-	      options
-	    );
-	  }
 	  return res
 	}
 
@@ -2046,9 +1854,6 @@ var DevPanel = (function () {
 	    observe(value);
 	    toggleObserving(prevShouldObserve);
 	  }
-	  {
-	    assertProp(prop, key, value, vm, absent);
-	  }
 	  return value
 	}
 
@@ -2061,15 +1866,6 @@ var DevPanel = (function () {
 	    return undefined
 	  }
 	  var def = prop.default;
-	  // warn against non-factory defaults for Object & Array
-	  if ( isObject(def)) {
-	    warn(
-	      'Invalid default value for prop "' + key + '": ' +
-	      'Props with type Object/Array must use a factory function ' +
-	      'to return the default value.',
-	      vm
-	    );
-	  }
 	  // the raw prop value was also undefined from previous render,
 	  // return previous default value to avoid unnecessary watcher trigger
 	  if (vm && vm.$options.propsData &&
@@ -2083,83 +1879,6 @@ var DevPanel = (function () {
 	  return typeof def === 'function' && getType(prop.type) !== 'Function'
 	    ? def.call(vm)
 	    : def
-	}
-
-	/**
-	 * Assert whether a prop is valid.
-	 */
-	function assertProp (
-	  prop,
-	  name,
-	  value,
-	  vm,
-	  absent
-	) {
-	  if (prop.required && absent) {
-	    warn(
-	      'Missing required prop: "' + name + '"',
-	      vm
-	    );
-	    return
-	  }
-	  if (value == null && !prop.required) {
-	    return
-	  }
-	  var type = prop.type;
-	  var valid = !type || type === true;
-	  var expectedTypes = [];
-	  if (type) {
-	    if (!Array.isArray(type)) {
-	      type = [type];
-	    }
-	    for (var i = 0; i < type.length && !valid; i++) {
-	      var assertedType = assertType(value, type[i]);
-	      expectedTypes.push(assertedType.expectedType || '');
-	      valid = assertedType.valid;
-	    }
-	  }
-
-	  if (!valid) {
-	    warn(
-	      getInvalidTypeMessage(name, value, expectedTypes),
-	      vm
-	    );
-	    return
-	  }
-	  var validator = prop.validator;
-	  if (validator) {
-	    if (!validator(value)) {
-	      warn(
-	        'Invalid prop: custom validator check failed for prop "' + name + '".',
-	        vm
-	      );
-	    }
-	  }
-	}
-
-	var simpleCheckRE = /^(String|Number|Boolean|Function|Symbol)$/;
-
-	function assertType (value, type) {
-	  var valid;
-	  var expectedType = getType(type);
-	  if (simpleCheckRE.test(expectedType)) {
-	    var t = typeof value;
-	    valid = t === expectedType.toLowerCase();
-	    // for primitive wrapper objects
-	    if (!valid && t === 'object') {
-	      valid = value instanceof type;
-	    }
-	  } else if (expectedType === 'Object') {
-	    valid = isPlainObject(value);
-	  } else if (expectedType === 'Array') {
-	    valid = Array.isArray(value);
-	  } else {
-	    valid = value instanceof type;
-	  }
-	  return {
-	    valid: valid,
-	    expectedType: expectedType
-	  }
 	}
 
 	/**
@@ -2186,49 +1905,6 @@ var DevPanel = (function () {
 	    }
 	  }
 	  return -1
-	}
-
-	function getInvalidTypeMessage (name, value, expectedTypes) {
-	  var message = "Invalid prop: type check failed for prop \"" + name + "\"." +
-	    " Expected " + (expectedTypes.map(capitalize).join(', '));
-	  var expectedType = expectedTypes[0];
-	  var receivedType = toRawType(value);
-	  var expectedValue = styleValue(value, expectedType);
-	  var receivedValue = styleValue(value, receivedType);
-	  // check if we need to specify expected value
-	  if (expectedTypes.length === 1 &&
-	      isExplicable(expectedType) &&
-	      !isBoolean(expectedType, receivedType)) {
-	    message += " with value " + expectedValue;
-	  }
-	  message += ", got " + receivedType + " ";
-	  // check if we need to specify received value
-	  if (isExplicable(receivedType)) {
-	    message += "with value " + receivedValue + ".";
-	  }
-	  return message
-	}
-
-	function styleValue (value, type) {
-	  if (type === 'String') {
-	    return ("\"" + value + "\"")
-	  } else if (type === 'Number') {
-	    return ("" + (Number(value)))
-	  } else {
-	    return ("" + value)
-	  }
-	}
-
-	function isExplicable (value) {
-	  var explicitTypes = ['string', 'number', 'boolean'];
-	  return explicitTypes.some(function (elem) { return value.toLowerCase() === elem; })
-	}
-
-	function isBoolean () {
-	  var args = [], len = arguments.length;
-	  while ( len-- ) args[ len ] = arguments[ len ];
-
-	  return args.some(function (elem) { return elem.toLowerCase() === 'boolean'; })
 	}
 
 	/*  */
@@ -2290,17 +1966,14 @@ var DevPanel = (function () {
 	      // if the user intentionally throws the original error in the handler,
 	      // do not log it twice
 	      if (e !== err) {
-	        logError(e, null, 'config.errorHandler');
+	        logError(e);
 	      }
 	    }
 	  }
-	  logError(err, vm, info);
+	  logError(err);
 	}
 
 	function logError (err, vm, info) {
-	  {
-	    warn(("Error in " + info + ": \"" + (err.toString()) + "\""), vm);
-	  }
 	  /* istanbul ignore else */
 	  if ((inBrowser || inWeex) && typeof console !== 'undefined') {
 	    console.error(err);
@@ -2417,96 +2090,6 @@ var DevPanel = (function () {
 
 	/*  */
 
-	/* not type checking this file because flow doesn't play well with Proxy */
-
-	var initProxy;
-
-	{
-	  var allowedGlobals = makeMap(
-	    'Infinity,undefined,NaN,isFinite,isNaN,' +
-	    'parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,' +
-	    'Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,' +
-	    'require' // for Webpack/Browserify
-	  );
-
-	  var warnNonPresent = function (target, key) {
-	    warn(
-	      "Property or method \"" + key + "\" is not defined on the instance but " +
-	      'referenced during render. Make sure that this property is reactive, ' +
-	      'either in the data option, or for class-based components, by ' +
-	      'initializing the property. ' +
-	      'See: https://vuejs.org/v2/guide/reactivity.html#Declaring-Reactive-Properties.',
-	      target
-	    );
-	  };
-
-	  var warnReservedPrefix = function (target, key) {
-	    warn(
-	      "Property \"" + key + "\" must be accessed with \"$data." + key + "\" because " +
-	      'properties starting with "$" or "_" are not proxied in the Vue instance to ' +
-	      'prevent conflicts with Vue internals. ' +
-	      'See: https://vuejs.org/v2/api/#data',
-	      target
-	    );
-	  };
-
-	  var hasProxy =
-	    typeof Proxy !== 'undefined' && isNative(Proxy);
-
-	  if (hasProxy) {
-	    var isBuiltInModifier = makeMap('stop,prevent,self,ctrl,shift,alt,meta,exact');
-	    config.keyCodes = new Proxy(config.keyCodes, {
-	      set: function set (target, key, value) {
-	        if (isBuiltInModifier(key)) {
-	          warn(("Avoid overwriting built-in modifier in config.keyCodes: ." + key));
-	          return false
-	        } else {
-	          target[key] = value;
-	          return true
-	        }
-	      }
-	    });
-	  }
-
-	  var hasHandler = {
-	    has: function has (target, key) {
-	      var has = key in target;
-	      var isAllowed = allowedGlobals(key) ||
-	        (typeof key === 'string' && key.charAt(0) === '_' && !(key in target.$data));
-	      if (!has && !isAllowed) {
-	        if (key in target.$data) { warnReservedPrefix(target, key); }
-	        else { warnNonPresent(target, key); }
-	      }
-	      return has || !isAllowed
-	    }
-	  };
-
-	  var getHandler = {
-	    get: function get (target, key) {
-	      if (typeof key === 'string' && !(key in target)) {
-	        if (key in target.$data) { warnReservedPrefix(target, key); }
-	        else { warnNonPresent(target, key); }
-	      }
-	      return target[key]
-	    }
-	  };
-
-	  initProxy = function initProxy (vm) {
-	    if (hasProxy) {
-	      // determine which proxy handler to use
-	      var options = vm.$options;
-	      var handlers = options.render && options.render._withStripped
-	        ? getHandler
-	        : hasHandler;
-	      vm._renderProxy = new Proxy(vm, handlers);
-	    } else {
-	      vm._renderProxy = vm;
-	    }
-	  };
-	}
-
-	/*  */
-
 	var seenObjects = new _Set();
 
 	/**
@@ -2539,29 +2122,6 @@ var DevPanel = (function () {
 	    keys = Object.keys(val);
 	    i = keys.length;
 	    while (i--) { _traverse(val[keys[i]], seen); }
-	  }
-	}
-
-	var mark;
-	var measure;
-
-	{
-	  var perf = inBrowser && window.performance;
-	  /* istanbul ignore if */
-	  if (
-	    perf &&
-	    perf.mark &&
-	    perf.measure &&
-	    perf.clearMarks &&
-	    perf.clearMeasures
-	  ) {
-	    mark = function (tag) { return perf.mark(tag); };
-	    measure = function (name, startTag, endTag) {
-	      perf.measure(name, startTag, endTag);
-	      perf.clearMarks(startTag);
-	      perf.clearMarks(endTag);
-	      // perf.clearMeasures(name)
-	    };
 	  }
 	}
 
@@ -2614,12 +2174,7 @@ var DevPanel = (function () {
 	    def$$1 = cur = on[name];
 	    old = oldOn[name];
 	    event = normalizeEvent(name);
-	    if (isUndef(cur)) {
-	       warn(
-	        "Invalid handler for event \"" + (event.name) + "\": got " + String(cur),
-	        vm
-	      );
-	    } else if (isUndef(old)) {
+	    if (isUndef(cur)) ; else if (isUndef(old)) {
 	      if (isUndef(cur.fns)) {
 	        cur = on[name] = createFnInvoker(cur, vm);
 	      }
@@ -2695,22 +2250,6 @@ var DevPanel = (function () {
 	  if (isDef(attrs) || isDef(props)) {
 	    for (var key in propOptions) {
 	      var altKey = hyphenate(key);
-	      {
-	        var keyInLowerCase = key.toLowerCase();
-	        if (
-	          key !== keyInLowerCase &&
-	          attrs && hasOwn(attrs, keyInLowerCase)
-	        ) {
-	          tip(
-	            "Prop \"" + keyInLowerCase + "\" is passed to component " +
-	            (formatComponentName(tag || Ctor)) + ", but the declared prop name is" +
-	            " \"" + key + "\". " +
-	            "Note that HTML attributes are case-insensitive and camelCased " +
-	            "props need to use their kebab-case equivalents when using in-DOM " +
-	            "templates. You should probably use \"" + altKey + "\" instead of \"" + key + "\"."
-	          );
-	        }
-	      }
 	      checkProp(res, props, key, altKey, true) ||
 	      checkProp(res, attrs, key, altKey, false);
 	    }
@@ -2848,14 +2387,7 @@ var DevPanel = (function () {
 	    Object.keys(result).forEach(function (key) {
 	      /* istanbul ignore else */
 	      {
-	        defineReactive$$1(vm, key, result[key], function () {
-	          warn(
-	            "Avoid mutating an injected value directly since the changes will be " +
-	            "overwritten whenever the provided component re-renders. " +
-	            "injection being mutated: \"" + key + "\"",
-	            vm
-	          );
-	        });
+	        defineReactive$$1(vm, key, result[key]);
 	      }
 	    });
 	    toggleObserving(true);
@@ -2889,8 +2421,6 @@ var DevPanel = (function () {
 	          result[key] = typeof provideDefault === 'function'
 	            ? provideDefault.call(vm)
 	            : provideDefault;
-	        } else {
-	          warn(("Injection \"" + key + "\" not found"), vm);
 	        }
 	      }
 	    }
@@ -3091,12 +2621,6 @@ var DevPanel = (function () {
 	  if (scopedSlotFn) { // scoped slot
 	    props = props || {};
 	    if (bindObject) {
-	      if ( !isObject(bindObject)) {
-	        warn(
-	          'slot v-bind without argument expects an Object',
-	          this
-	        );
-	      }
 	      props = extend(extend({}, bindObject), props);
 	    }
 	    nodes = scopedSlotFn(props) || fallback;
@@ -3118,7 +2642,7 @@ var DevPanel = (function () {
 	 * Runtime helper for resolving filters
 	 */
 	function resolveFilter (id) {
-	  return resolveAsset(this.$options, 'filters', id, true) || identity
+	  return resolveAsset(this.$options, 'filters', id) || identity
 	}
 
 	/*  */
@@ -3166,12 +2690,7 @@ var DevPanel = (function () {
 	  isSync
 	) {
 	  if (value) {
-	    if (!isObject(value)) {
-	       warn(
-	        'v-bind without argument expects an Object or Array value',
-	        this
-	      );
-	    } else {
+	    if (!isObject(value)) ; else {
 	      if (Array.isArray(value)) {
 	        value = toObject(value);
 	      }
@@ -3274,12 +2793,7 @@ var DevPanel = (function () {
 
 	function bindObjectListeners (data, value) {
 	  if (value) {
-	    if (!isPlainObject(value)) {
-	       warn(
-	        'v-on without argument expects an Object value',
-	        this
-	      );
-	    } else {
+	    if (!isPlainObject(value)) ; else {
 	      var on = data.on = data.on ? extend({}, data.on) : {};
 	      for (var key in value) {
 	        var existing = on[key];
@@ -3326,12 +2840,6 @@ var DevPanel = (function () {
 	    var key = values[i];
 	    if (typeof key === 'string' && key) {
 	      baseObj[values[i]] = values[i + 1];
-	    } else if ( key !== '' && key !== null) {
-	      // null is a special value for explicitly removing a binding
-	      warn(
-	        ("Invalid value for dynamic directive argument (expected string or null): " + key),
-	        this
-	      );
 	    }
 	  }
 	  return baseObj
@@ -3474,12 +2982,12 @@ var DevPanel = (function () {
 	  var vnode = options.render.call(null, renderContext._c, renderContext);
 
 	  if (vnode instanceof VNode) {
-	    return cloneAndMarkFunctionalResult(vnode, data, renderContext.parent, options, renderContext)
+	    return cloneAndMarkFunctionalResult(vnode, data, renderContext.parent, options)
 	  } else if (Array.isArray(vnode)) {
 	    var vnodes = normalizeChildren(vnode) || [];
 	    var res = new Array(vnodes.length);
 	    for (var i = 0; i < vnodes.length; i++) {
-	      res[i] = cloneAndMarkFunctionalResult(vnodes[i], data, renderContext.parent, options, renderContext);
+	      res[i] = cloneAndMarkFunctionalResult(vnodes[i], data, renderContext.parent, options);
 	    }
 	    return res
 	  }
@@ -3492,9 +3000,6 @@ var DevPanel = (function () {
 	  var clone = cloneVNode(vnode);
 	  clone.fnContext = contextVm;
 	  clone.fnOptions = options;
-	  {
-	    (clone.devtoolsMeta = clone.devtoolsMeta || {}).renderContext = renderContext;
-	  }
 	  if (data.slot) {
 	    (clone.data || (clone.data = {})).slot = data.slot;
 	  }
@@ -3603,9 +3108,6 @@ var DevPanel = (function () {
 	  // if at this stage it's not a constructor or an async component factory,
 	  // reject.
 	  if (typeof Ctor !== 'function') {
-	    {
-	      warn(("Invalid Component definition: " + (String(Ctor))), context);
-	    }
 	    return
 	  }
 
@@ -3640,7 +3142,7 @@ var DevPanel = (function () {
 	  }
 
 	  // extract props
-	  var propsData = extractPropsFromVNodeData(data, Ctor, tag);
+	  var propsData = extractPropsFromVNodeData(data, Ctor);
 
 	  // functional component
 	  if (isTrue(Ctor.options.functional)) {
@@ -3777,11 +3279,6 @@ var DevPanel = (function () {
 	  normalizationType
 	) {
 	  if (isDef(data) && isDef((data).__ob__)) {
-	     warn(
-	      "Avoid using observed data object as vnode data: " + (JSON.stringify(data)) + "\n" +
-	      'Always create fresh vnode data objects in each render!',
-	      context
-	    );
 	    return createEmptyVNode()
 	  }
 	  // object syntax in v-bind
@@ -3791,18 +3288,6 @@ var DevPanel = (function () {
 	  if (!tag) {
 	    // in case of component :is set to falsy value
 	    return createEmptyVNode()
-	  }
-	  // warn against non-primitive key
-	  if (
-	    isDef(data) && isDef(data.key) && !isPrimitive(data.key)
-	  ) {
-	    {
-	      warn(
-	        'Avoid using non-primitive value as key, ' +
-	        'use string/number value instead.',
-	        context
-	      );
-	    }
 	  }
 	  // support single function children as default scoped slot
 	  if (Array.isArray(children) &&
@@ -3822,13 +3307,6 @@ var DevPanel = (function () {
 	    var Ctor;
 	    ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag);
 	    if (config.isReservedTag(tag)) {
-	      // platform built-in elements
-	      if ( isDef(data) && isDef(data.nativeOn)) {
-	        warn(
-	          ("The .native modifier for v-on is only valid on components but it was used on <" + tag + ">."),
-	          context
-	        );
-	      }
 	      vnode = new VNode(
 	        config.parsePlatformTagName(tag), data, children,
 	        undefined, undefined, context
@@ -3915,12 +3393,8 @@ var DevPanel = (function () {
 
 	  /* istanbul ignore else */
 	  {
-	    defineReactive$$1(vm, '$attrs', parentData && parentData.attrs || emptyObject, function () {
-	      !isUpdatingChildComponent && warn("$attrs is readonly.", vm);
-	    }, true);
-	    defineReactive$$1(vm, '$listeners', options._parentListeners || emptyObject, function () {
-	      !isUpdatingChildComponent && warn("$listeners is readonly.", vm);
-	    }, true);
+	    defineReactive$$1(vm, '$attrs', parentData && parentData.attrs || emptyObject, null, true);
+	    defineReactive$$1(vm, '$listeners', options._parentListeners || emptyObject, null, true);
 	  }
 	}
 
@@ -3964,14 +3438,7 @@ var DevPanel = (function () {
 	      // return error render result,
 	      // or previous vnode to prevent render error causing blank component
 	      /* istanbul ignore else */
-	      if ( vm.$options.renderError) {
-	        try {
-	          vnode = vm.$options.renderError.call(vm._renderProxy, vm.$createElement, e);
-	        } catch (e) {
-	          handleError(e, vm, "renderError");
-	          vnode = vm._vnode;
-	        }
-	      } else {
+	      {
 	        vnode = vm._vnode;
 	      }
 	    } finally {
@@ -3983,13 +3450,6 @@ var DevPanel = (function () {
 	    }
 	    // return empty vnode in case the render function errored out
 	    if (!(vnode instanceof VNode)) {
-	      if ( Array.isArray(vnode)) {
-	        warn(
-	          'Multiple root nodes returned from render function. Render function ' +
-	          'should return a single root node.',
-	          vm
-	        );
-	      }
 	      vnode = createEmptyVNode();
 	    }
 	    // set parent
@@ -4086,10 +3546,6 @@ var DevPanel = (function () {
 	    });
 
 	    var reject = once(function (reason) {
-	       warn(
-	        "Failed to resolve async component: " + (String(factory)) +
-	        (reason ? ("\nReason: " + reason) : '')
-	      );
 	      if (isDef(factory.errorComp)) {
 	        factory.error = true;
 	        forceRender(true);
@@ -4131,8 +3587,7 @@ var DevPanel = (function () {
 	            timerTimeout = null;
 	            if (isUndef(factory.resolved)) {
 	              reject(
-	                 ("timeout (" + (res.timeout) + "ms)")
-	                  
+	                 null
 	              );
 	            }
 	          }, res.timeout);
@@ -4279,18 +3734,6 @@ var DevPanel = (function () {
 
 	  Vue.prototype.$emit = function (event) {
 	    var vm = this;
-	    {
-	      var lowerCaseEvent = event.toLowerCase();
-	      if (lowerCaseEvent !== event && vm._events[lowerCaseEvent]) {
-	        tip(
-	          "Event \"" + lowerCaseEvent + "\" is emitted in component " +
-	          (formatComponentName(vm)) + " but the handler is registered for \"" + event + "\". " +
-	          "Note that HTML attributes are case-insensitive and you cannot use " +
-	          "v-on to listen to camelCase events when using in-DOM templates. " +
-	          "You should probably use \"" + (hyphenate(event)) + "\" instead of \"" + event + "\"."
-	        );
-	      }
-	    }
 	    var cbs = vm._events[event];
 	    if (cbs) {
 	      cbs = cbs.length > 1 ? toArray(cbs) : cbs;
@@ -4307,7 +3750,6 @@ var DevPanel = (function () {
 	/*  */
 
 	var activeInstance = null;
-	var isUpdatingChildComponent = false;
 
 	function setActiveInstance(vm) {
 	  var prevActiveInstance = activeInstance;
@@ -4434,46 +3876,12 @@ var DevPanel = (function () {
 	  vm.$el = el;
 	  if (!vm.$options.render) {
 	    vm.$options.render = createEmptyVNode;
-	    {
-	      /* istanbul ignore if */
-	      if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') ||
-	        vm.$options.el || el) {
-	        warn(
-	          'You are using the runtime-only build of Vue where the template ' +
-	          'compiler is not available. Either pre-compile the templates into ' +
-	          'render functions, or use the compiler-included build.',
-	          vm
-	        );
-	      } else {
-	        warn(
-	          'Failed to mount component: template or render function not defined.',
-	          vm
-	        );
-	      }
-	    }
 	  }
 	  callHook(vm, 'beforeMount');
 
 	  var updateComponent;
 	  /* istanbul ignore if */
-	  if ( config.performance && mark) {
-	    updateComponent = function () {
-	      var name = vm._name;
-	      var id = vm._uid;
-	      var startTag = "vue-perf-start:" + id;
-	      var endTag = "vue-perf-end:" + id;
-
-	      mark(startTag);
-	      var vnode = vm._render();
-	      mark(endTag);
-	      measure(("vue " + name + " render"), startTag, endTag);
-
-	      mark(startTag);
-	      vm._update(vnode, hydrating);
-	      mark(endTag);
-	      measure(("vue " + name + " patch"), startTag, endTag);
-	    };
-	  } else {
+	  {
 	    updateComponent = function () {
 	      vm._update(vm._render(), hydrating);
 	    };
@@ -4507,9 +3915,6 @@ var DevPanel = (function () {
 	  parentVnode,
 	  renderChildren
 	) {
-	  {
-	    isUpdatingChildComponent = true;
-	  }
 
 	  // determine whether component has slot children
 	  // we need to do this before overwriting $options._renderChildren.
@@ -4574,10 +3979,6 @@ var DevPanel = (function () {
 	    vm.$slots = resolveSlots(renderChildren, parentVnode.context);
 	    vm.$forceUpdate();
 	  }
-
-	  {
-	    isUpdatingChildComponent = false;
-	  }
 	}
 
 	function isInInactiveTree (vm) {
@@ -4637,14 +4038,9 @@ var DevPanel = (function () {
 	  popTarget();
 	}
 
-	/*  */
-
-	var MAX_UPDATE_COUNT = 100;
-
 	var queue = [];
 	var activatedChildren = [];
 	var has = {};
-	var circular = {};
 	var waiting = false;
 	var flushing = false;
 	var index = 0;
@@ -4655,9 +4051,6 @@ var DevPanel = (function () {
 	function resetSchedulerState () {
 	  index = queue.length = activatedChildren.length = 0;
 	  has = {};
-	  {
-	    circular = {};
-	  }
 	  waiting = flushing = false;
 	}
 
@@ -4720,21 +4113,6 @@ var DevPanel = (function () {
 	    id = watcher.id;
 	    has[id] = null;
 	    watcher.run();
-	    // in dev build, check and stop circular updates.
-	    if ( has[id] != null) {
-	      circular[id] = (circular[id] || 0) + 1;
-	      if (circular[id] > MAX_UPDATE_COUNT) {
-	        warn(
-	          'You may have an infinite update loop ' + (
-	            watcher.user
-	              ? ("in watcher with expression \"" + (watcher.expression) + "\"")
-	              : "in a component render function."
-	          ),
-	          watcher.vm
-	        );
-	        break
-	      }
-	    }
 	  }
 
 	  // keep copies of post queues before resetting state
@@ -4806,11 +4184,6 @@ var DevPanel = (function () {
 	    // queue the flush
 	    if (!waiting) {
 	      waiting = true;
-
-	      if ( !config.async) {
-	        flushSchedulerQueue();
-	        return
-	      }
 	      nextTick(flushSchedulerQueue);
 	    }
 	  }
@@ -4857,8 +4230,7 @@ var DevPanel = (function () {
 	  this.newDeps = [];
 	  this.depIds = new _Set();
 	  this.newDepIds = new _Set();
-	  this.expression =  expOrFn.toString()
-	    ;
+	  this.expression =  '';
 	  // parse expression for getter
 	  if (typeof expOrFn === 'function') {
 	    this.getter = expOrFn;
@@ -4866,12 +4238,6 @@ var DevPanel = (function () {
 	    this.getter = parsePath(expOrFn);
 	    if (!this.getter) {
 	      this.getter = noop;
-	       warn(
-	        "Failed watching path: \"" + expOrFn + "\" " +
-	        'Watcher only accepts simple dot-delimited paths. ' +
-	        'For full control, use a function instead.',
-	        vm
-	      );
 	    }
 	  }
 	  this.value = this.lazy
@@ -5076,25 +4442,7 @@ var DevPanel = (function () {
 	    var value = validateProp(key, propsOptions, propsData, vm);
 	    /* istanbul ignore else */
 	    {
-	      var hyphenatedKey = hyphenate(key);
-	      if (isReservedAttribute(hyphenatedKey) ||
-	          config.isReservedAttr(hyphenatedKey)) {
-	        warn(
-	          ("\"" + hyphenatedKey + "\" is a reserved attribute and cannot be used as component prop."),
-	          vm
-	        );
-	      }
-	      defineReactive$$1(props, key, value, function () {
-	        if (!isRoot && !isUpdatingChildComponent) {
-	          warn(
-	            "Avoid mutating a prop directly since the value will be " +
-	            "overwritten whenever the parent component re-renders. " +
-	            "Instead, use a data or computed property based on the prop's " +
-	            "value. Prop being mutated: \"" + key + "\"",
-	            vm
-	          );
-	        }
-	      });
+	      defineReactive$$1(props, key, value);
 	    }
 	    // static props are already proxied on the component's prototype
 	    // during Vue.extend(). We only need to proxy props defined at
@@ -5115,11 +4463,6 @@ var DevPanel = (function () {
 	    : data || {};
 	  if (!isPlainObject(data)) {
 	    data = {};
-	     warn(
-	      'data functions should return an object:\n' +
-	      'https://vuejs.org/v2/guide/components.html#data-Must-Be-a-Function',
-	      vm
-	    );
 	  }
 	  // proxy data on instance
 	  var keys = Object.keys(data);
@@ -5128,21 +4471,7 @@ var DevPanel = (function () {
 	  var i = keys.length;
 	  while (i--) {
 	    var key = keys[i];
-	    {
-	      if (methods && hasOwn(methods, key)) {
-	        warn(
-	          ("Method \"" + key + "\" has already been defined as a data property."),
-	          vm
-	        );
-	      }
-	    }
-	    if (props && hasOwn(props, key)) {
-	       warn(
-	        "The data property \"" + key + "\" is already declared as a prop. " +
-	        "Use prop default value instead.",
-	        vm
-	      );
-	    } else if (!isReserved(key)) {
+	    if (props && hasOwn(props, key)) ; else if (!isReserved(key)) {
 	      proxy(vm, "_data", key);
 	    }
 	  }
@@ -5174,12 +4503,6 @@ var DevPanel = (function () {
 	  for (var key in computed) {
 	    var userDef = computed[key];
 	    var getter = typeof userDef === 'function' ? userDef : userDef.get;
-	    if ( getter == null) {
-	      warn(
-	        ("Getter is missing for computed property \"" + key + "\"."),
-	        vm
-	      );
-	    }
 
 	    if (!isSSR) {
 	      // create internal watcher for the computed property.
@@ -5196,12 +4519,6 @@ var DevPanel = (function () {
 	    // at instantiation here.
 	    if (!(key in vm)) {
 	      defineComputed(vm, key, userDef);
-	    } else {
-	      if (key in vm.$data) {
-	        warn(("The computed property \"" + key + "\" is already defined in data."), vm);
-	      } else if (vm.$options.props && key in vm.$options.props) {
-	        warn(("The computed property \"" + key + "\" is already defined as a prop."), vm);
-	      }
 	    }
 	  }
 	}
@@ -5224,15 +4541,6 @@ var DevPanel = (function () {
 	        : createGetterInvoker(userDef.get)
 	      : noop;
 	    sharedPropertyDefinition.set = userDef.set || noop;
-	  }
-	  if (
-	      sharedPropertyDefinition.set === noop) {
-	    sharedPropertyDefinition.set = function () {
-	      warn(
-	        ("Computed property \"" + key + "\" was assigned to but it has no setter."),
-	        this
-	      );
-	    };
 	  }
 	  Object.defineProperty(target, key, sharedPropertyDefinition);
 	}
@@ -5261,27 +4569,6 @@ var DevPanel = (function () {
 	function initMethods (vm, methods) {
 	  var props = vm.$options.props;
 	  for (var key in methods) {
-	    {
-	      if (typeof methods[key] !== 'function') {
-	        warn(
-	          "Method \"" + key + "\" has type \"" + (typeof methods[key]) + "\" in the component definition. " +
-	          "Did you reference the function correctly?",
-	          vm
-	        );
-	      }
-	      if (props && hasOwn(props, key)) {
-	        warn(
-	          ("Method \"" + key + "\" has already been defined as a prop."),
-	          vm
-	        );
-	      }
-	      if ((key in vm) && isReserved(key)) {
-	        warn(
-	          "Method \"" + key + "\" conflicts with an existing Vue instance method. " +
-	          "Avoid defining component methods that start with _ or $."
-	        );
-	      }
-	    }
 	    vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm);
 	  }
 	}
@@ -5323,18 +4610,6 @@ var DevPanel = (function () {
 	  dataDef.get = function () { return this._data };
 	  var propsDef = {};
 	  propsDef.get = function () { return this._props };
-	  {
-	    dataDef.set = function () {
-	      warn(
-	        'Avoid replacing instance root $data. ' +
-	        'Use nested data properties instead.',
-	        this
-	      );
-	    };
-	    propsDef.set = function () {
-	      warn("$props is readonly.", this);
-	    };
-	  }
 	  Object.defineProperty(Vue.prototype, '$data', dataDef);
 	  Object.defineProperty(Vue.prototype, '$props', propsDef);
 
@@ -5376,14 +4651,6 @@ var DevPanel = (function () {
 	    // a uid
 	    vm._uid = uid$3++;
 
-	    var startTag, endTag;
-	    /* istanbul ignore if */
-	    if ( config.performance && mark) {
-	      startTag = "vue-perf-start:" + (vm._uid);
-	      endTag = "vue-perf-end:" + (vm._uid);
-	      mark(startTag);
-	    }
-
 	    // a flag to avoid this being observed
 	    vm._isVue = true;
 	    // merge options
@@ -5401,7 +4668,7 @@ var DevPanel = (function () {
 	    }
 	    /* istanbul ignore else */
 	    {
-	      initProxy(vm);
+	      vm._renderProxy = vm;
 	    }
 	    // expose real self
 	    vm._self = vm;
@@ -5413,13 +4680,6 @@ var DevPanel = (function () {
 	    initState(vm);
 	    initProvide(vm); // resolve provide after data/props
 	    callHook(vm, 'created');
-
-	    /* istanbul ignore if */
-	    if ( config.performance && mark) {
-	      vm._name = formatComponentName(vm, false);
-	      mark(endTag);
-	      measure(("vue " + (vm._name) + " init"), startTag, endTag);
-	    }
 
 	    if (vm.$options.el) {
 	      vm.$mount(vm.$options.el);
@@ -5484,11 +4744,6 @@ var DevPanel = (function () {
 	}
 
 	function Vue (options) {
-	  if (
-	    !(this instanceof Vue)
-	  ) {
-	    warn('Vue is a constructor and should be called with the `new` keyword');
-	  }
 	  this._init(options);
 	}
 
@@ -5553,9 +4808,6 @@ var DevPanel = (function () {
 	    }
 
 	    var name = extendOptions.name || Super.options.name;
-	    if ( name) {
-	      validateComponentName(name);
-	    }
 
 	    var Sub = function VueComponent (options) {
 	      this._init(options);
@@ -5635,10 +4887,6 @@ var DevPanel = (function () {
 	      if (!definition) {
 	        return this.options[type + 's'][id]
 	      } else {
-	        /* istanbul ignore if */
-	        if ( type === 'component') {
-	          validateComponentName(id);
-	        }
 	        if (type === 'component' && isPlainObject(definition)) {
 	          definition.name = definition.name || id;
 	          definition = this.options._base.extend(definition);
@@ -5793,13 +5041,6 @@ var DevPanel = (function () {
 	  // config
 	  var configDef = {};
 	  configDef.get = function () { return config; };
-	  {
-	    configDef.set = function () {
-	      warn(
-	        'Do not replace the Vue.config object, set individual fields instead.'
-	      );
-	    };
-	  }
 	  Object.defineProperty(Vue, 'config', configDef);
 
 	  // exposed util methods.
@@ -6075,9 +5316,6 @@ var DevPanel = (function () {
 	  if (typeof el === 'string') {
 	    var selected = document.querySelector(el);
 	    if (!selected) {
-	       warn(
-	        'Cannot find element: ' + el
-	      );
 	      return document.createElement('div')
 	    }
 	    return selected
@@ -6292,24 +5530,6 @@ var DevPanel = (function () {
 	    }
 	  }
 
-	  function isUnknownElement$$1 (vnode, inVPre) {
-	    return (
-	      !inVPre &&
-	      !vnode.ns &&
-	      !(
-	        config.ignoredElements.length &&
-	        config.ignoredElements.some(function (ignore) {
-	          return isRegExp(ignore)
-	            ? ignore.test(vnode.tag)
-	            : ignore === vnode.tag
-	        })
-	      ) &&
-	      config.isUnknownElement(vnode.tag)
-	    )
-	  }
-
-	  var creatingElmInVPre = 0;
-
 	  function createElm (
 	    vnode,
 	    insertedVnodeQueue,
@@ -6337,19 +5557,6 @@ var DevPanel = (function () {
 	    var children = vnode.children;
 	    var tag = vnode.tag;
 	    if (isDef(tag)) {
-	      {
-	        if (data && data.pre) {
-	          creatingElmInVPre++;
-	        }
-	        if (isUnknownElement$$1(vnode, creatingElmInVPre)) {
-	          warn(
-	            'Unknown custom element: <' + tag + '> - did you ' +
-	            'register the component correctly? For recursive components, ' +
-	            'make sure to provide the "name" option.',
-	            vnode.context
-	          );
-	        }
-	      }
 
 	      vnode.elm = vnode.ns
 	        ? nodeOps.createElementNS(vnode.ns, tag)
@@ -6363,10 +5570,6 @@ var DevPanel = (function () {
 	          invokeCreateHooks(vnode, insertedVnodeQueue);
 	        }
 	        insert(parentElm, vnode.elm, refElm);
-	      }
-
-	      if ( data && data.pre) {
-	        creatingElmInVPre--;
 	      }
 	    } else if (isTrue(vnode.isComment)) {
 	      vnode.elm = nodeOps.createComment(vnode.text);
@@ -6453,9 +5656,6 @@ var DevPanel = (function () {
 
 	  function createChildren (vnode, children, insertedVnodeQueue) {
 	    if (Array.isArray(children)) {
-	      {
-	        checkDuplicateKeys(children);
-	      }
 	      for (var i = 0; i < children.length; ++i) {
 	        createElm(children[i], insertedVnodeQueue, vnode.elm, null, true, children, i);
 	      }
@@ -6587,10 +5787,6 @@ var DevPanel = (function () {
 	    // during leaving transitions
 	    var canMove = !removeOnly;
 
-	    {
-	      checkDuplicateKeys(newCh);
-	    }
-
 	    while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 	      if (isUndef(oldStartVnode)) {
 	        oldStartVnode = oldCh[++oldStartIdx]; // Vnode has been moved left
@@ -6640,24 +5836,6 @@ var DevPanel = (function () {
 	      addVnodes(parentElm, refElm, newCh, newStartIdx, newEndIdx, insertedVnodeQueue);
 	    } else if (newStartIdx > newEndIdx) {
 	      removeVnodes(oldCh, oldStartIdx, oldEndIdx);
-	    }
-	  }
-
-	  function checkDuplicateKeys (children) {
-	    var seenKeys = {};
-	    for (var i = 0; i < children.length; i++) {
-	      var vnode = children[i];
-	      var key = vnode.key;
-	      if (isDef(key)) {
-	        if (seenKeys[key]) {
-	          warn(
-	            ("Duplicate keys detected: '" + key + "'. This may cause an update error."),
-	            vnode.context
-	          );
-	        } else {
-	          seenKeys[key] = true;
-	        }
-	      }
 	    }
 	  }
 
@@ -6725,9 +5903,6 @@ var DevPanel = (function () {
 	      if (isDef(oldCh) && isDef(ch)) {
 	        if (oldCh !== ch) { updateChildren(elm, oldCh, ch, insertedVnodeQueue, removeOnly); }
 	      } else if (isDef(ch)) {
-	        {
-	          checkDuplicateKeys(ch);
-	        }
 	        if (isDef(oldVnode.text)) { nodeOps.setTextContent(elm, ''); }
 	        addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue);
 	      } else if (isDef(oldCh)) {
@@ -6754,8 +5929,6 @@ var DevPanel = (function () {
 	      }
 	    }
 	  }
-
-	  var hydrationBailed = false;
 	  // list of modules that can skip create hook during hydration because they
 	  // are already rendered on the client or has no need for initialization
 	  // Note: style is excluded because it relies on initial clone for future
@@ -6775,12 +5948,6 @@ var DevPanel = (function () {
 	      vnode.isAsyncPlaceholder = true;
 	      return true
 	    }
-	    // assert node match
-	    {
-	      if (!assertNodeMatch(elm, vnode, inVPre)) {
-	        return false
-	      }
-	    }
 	    if (isDef(data)) {
 	      if (isDef(i = data.hook) && isDef(i = i.init)) { i(vnode, true /* hydrating */); }
 	      if (isDef(i = vnode.componentInstance)) {
@@ -6798,16 +5965,6 @@ var DevPanel = (function () {
 	          // v-html and domProps: innerHTML
 	          if (isDef(i = data) && isDef(i = i.domProps) && isDef(i = i.innerHTML)) {
 	            if (i !== elm.innerHTML) {
-	              /* istanbul ignore if */
-	              if (
-	                typeof console !== 'undefined' &&
-	                !hydrationBailed
-	              ) {
-	                hydrationBailed = true;
-	                console.warn('Parent: ', elm);
-	                console.warn('server innerHTML: ', i);
-	                console.warn('client innerHTML: ', elm.innerHTML);
-	              }
 	              return false
 	            }
 	          } else {
@@ -6824,15 +5981,6 @@ var DevPanel = (function () {
 	            // if childNode is not null, it means the actual childNodes list is
 	            // longer than the virtual children list.
 	            if (!childrenMatch || childNode) {
-	              /* istanbul ignore if */
-	              if (
-	                typeof console !== 'undefined' &&
-	                !hydrationBailed
-	              ) {
-	                hydrationBailed = true;
-	                console.warn('Parent: ', elm);
-	                console.warn('Mismatching childNodes vs. VNodes: ', elm.childNodes, children);
-	              }
 	              return false
 	            }
 	          }
@@ -6856,17 +6004,6 @@ var DevPanel = (function () {
 	      elm.data = vnode.text;
 	    }
 	    return true
-	  }
-
-	  function assertNodeMatch (node, vnode, inVPre) {
-	    if (isDef(vnode.tag)) {
-	      return vnode.tag.indexOf('vue-component') === 0 || (
-	        !isUnknownElement$$1(vnode, inVPre) &&
-	        vnode.tag.toLowerCase() === (node.tagName && node.tagName.toLowerCase())
-	      )
-	    } else {
-	      return node.nodeType === (vnode.isComment ? 8 : 3)
-	    }
 	  }
 
 	  return function patch (oldVnode, vnode, hydrating, removeOnly) {
@@ -6900,14 +6037,6 @@ var DevPanel = (function () {
 	            if (hydrate(oldVnode, vnode, insertedVnodeQueue)) {
 	              invokeInsertHook(vnode, insertedVnodeQueue, true);
 	              return oldVnode
-	            } else {
-	              warn(
-	                'The client-side rendered virtual DOM tree is not matching ' +
-	                'server-rendered content. This is likely caused by incorrect ' +
-	                'HTML markup, for example nesting block-level elements inside ' +
-	                '<p>, or missing <tbody>. Bailing hydration and performing ' +
-	                'full client-side render.'
-	              );
 	            }
 	          }
 	          // either not server-rendered, or hydration failed.
@@ -7070,7 +6199,7 @@ var DevPanel = (function () {
 	      dir.modifiers = emptyModifiers;
 	    }
 	    res[getRawDirName(dir)] = dir;
-	    dir.def = resolveAsset(vm.$options, 'directives', dir.name, true);
+	    dir.def = resolveAsset(vm.$options, 'directives', dir.name);
 	  }
 	  // $flow-disable-line
 	  return res
@@ -7973,10 +7102,6 @@ var DevPanel = (function () {
 	      : duration
 	  );
 
-	  if ( explicitEnterDuration != null) {
-	    checkDuration(explicitEnterDuration, 'enter', vnode);
-	  }
-
 	  var expectsCSS = css !== false && !isIE9;
 	  var userWantsControl = getHookArgumentsLength(enterHook);
 
@@ -8081,10 +7206,6 @@ var DevPanel = (function () {
 	      : duration
 	  );
 
-	  if ( isDef(explicitLeaveDuration)) {
-	    checkDuration(explicitLeaveDuration, 'leave', vnode);
-	  }
-
 	  var cb = el._leaveCb = once(function () {
 	    if (el.parentNode && el.parentNode._pending) {
 	      el.parentNode._pending[vnode.key] = null;
@@ -8142,23 +7263,6 @@ var DevPanel = (function () {
 	    if (!expectsCSS && !userWantsControl) {
 	      cb();
 	    }
-	  }
-	}
-
-	// only used in dev mode
-	function checkDuration (val, name, vnode) {
-	  if (typeof val !== 'number') {
-	    warn(
-	      "<transition> explicit " + name + " duration is not a valid number - " +
-	      "got " + (JSON.stringify(val)) + ".",
-	      vnode.context
-	    );
-	  } else if (isNaN(val)) {
-	    warn(
-	      "<transition> explicit " + name + " duration is NaN - " +
-	      'the duration expression might be incorrect.',
-	      vnode.context
-	    );
 	  }
 	}
 
@@ -8295,11 +7399,11 @@ var DevPanel = (function () {
 	};
 
 	function setSelected (el, binding, vm) {
-	  actuallySetSelected(el, binding, vm);
+	  actuallySetSelected(el, binding);
 	  /* istanbul ignore if */
 	  if (isIE || isEdge) {
 	    setTimeout(function () {
-	      actuallySetSelected(el, binding, vm);
+	      actuallySetSelected(el, binding);
 	    }, 0);
 	  }
 	}
@@ -8308,11 +7412,6 @@ var DevPanel = (function () {
 	  var value = binding.value;
 	  var isMultiple = el.multiple;
 	  if (isMultiple && !Array.isArray(value)) {
-	     warn(
-	      "<select multiple v-model=\"" + (binding.expression) + "\"> " +
-	      "expects an Array value for its binding, but got " + (Object.prototype.toString.call(value).slice(8, -1)),
-	      vm
-	    );
 	    return
 	  }
 	  var selected, option;
@@ -8524,26 +7623,7 @@ var DevPanel = (function () {
 	      return
 	    }
 
-	    // warn multiple elements
-	    if ( children.length > 1) {
-	      warn(
-	        '<transition> can only be used on a single element. Use ' +
-	        '<transition-group> for lists.',
-	        this.$parent
-	      );
-	    }
-
 	    var mode = this.mode;
-
-	    // warn invalid mode
-	    if (
-	      mode && mode !== 'in-out' && mode !== 'out-in'
-	    ) {
-	      warn(
-	        'invalid <transition> mode: ' + mode,
-	        this.$parent
-	      );
-	    }
 
 	    var rawChild = children[0];
 
@@ -8669,10 +7749,6 @@ var DevPanel = (function () {
 	          children.push(c);
 	          map[c.key] = c
 	          ;(c.data || (c.data = {})).transition = transitionData;
-	        } else {
-	          var opts = c.componentOptions;
-	          var name = opts ? (opts.Ctor.options.name || opts.tag || '') : c.tag;
-	          warn(("<transition-group> children must be keyed: <" + name + ">"));
 	        }
 	      }
 	    }
@@ -8829,22 +7905,7 @@ var DevPanel = (function () {
 	    if (config.devtools) {
 	      if (devtools) {
 	        devtools.emit('init', Vue);
-	      } else {
-	        console[console.info ? 'info' : 'log'](
-	          'Download the Vue Devtools extension for a better development experience:\n' +
-	          'https://github.com/vuejs/vue-devtools'
-	        );
 	      }
-	    }
-	    if (
-	      config.productionTip !== false &&
-	      typeof console !== 'undefined'
-	    ) {
-	      console[console.info ? 'info' : 'log'](
-	        "You are running Vue in development mode.\n" +
-	        "Make sure to turn on production mode when deploying for production.\n" +
-	        "See more tips at https://vuejs.org/guide/deployment.html"
-	      );
 	    }
 	  }, 0);
 	}
@@ -8854,19 +7915,6 @@ var DevPanel = (function () {
 	  * (c) 2020 Evan You
 	  * @license MIT
 	  */
-	/*  */
-
-	function assert (condition, message) {
-	  if (!condition) {
-	    throw new Error(("[vue-router] " + message))
-	  }
-	}
-
-	function warn$1 (condition, message) {
-	  if ( !condition) {
-	    typeof console !== 'undefined' && console.warn(("[vue-router] " + message));
-	  }
-	}
 
 	function isError (err) {
 	  return Object.prototype.toString.call(err).indexOf('Error') > -1
@@ -9024,14 +8072,6 @@ var DevPanel = (function () {
 	      return config(route)
 	    case 'boolean':
 	      return config ? route.params : undefined
-	    default:
-	      {
-	        warn$1(
-	          false,
-	          "props in \"" + (route.path) + "\" is a " + (typeof config) + ", " +
-	          "expecting an object, function or boolean."
-	        );
-	      }
 	  }
 	}
 
@@ -9062,7 +8102,6 @@ var DevPanel = (function () {
 	  try {
 	    parsedQuery = parse(query || '');
 	  } catch (e) {
-	     warn$1(false, e.message);
 	    parsedQuery = {};
 	  }
 	  for (var key in extraQuery) {
@@ -9794,10 +8833,6 @@ var DevPanel = (function () {
 
 	    return filler(params, { pretty: true })
 	  } catch (e) {
-	    {
-	      // Fix #3072 no warn if `pathMatch` is string
-	      warn$1(typeof params.pathMatch === 'string', ("missing param for " + routeMsg + ": " + (e.message)));
-	    }
 	    return ''
 	  } finally {
 	    // delete the 0 if it was added
@@ -9837,8 +8872,6 @@ var DevPanel = (function () {
 	    } else if (current.matched.length) {
 	      var rawPath = current.matched[current.matched.length - 1].path;
 	      next.path = fillParams(rawPath, params$1, ("path " + (current.path)));
-	    } else {
-	      warn$1(false, "relative params navigation requires a current route.");
 	    }
 	    return next
 	  }
@@ -9979,12 +9012,6 @@ var DevPanel = (function () {
 	      if (scopedSlot.length === 1) {
 	        return scopedSlot[0]
 	      } else if (scopedSlot.length > 1 || !scopedSlot.length) {
-	        {
-	          warn$1(
-	            false,
-	            ("RouterLink with to=\"" + (this.to) + "\" is trying to use a scoped slot but it didn't provide exactly one child. Wrapping the content with a span element.")
-	          );
-	        }
 	        return scopedSlot.length === 0 ? h() : h('span', {}, scopedSlot)
 	      }
 	    }
@@ -10163,15 +9190,6 @@ var DevPanel = (function () {
 	) {
 	  var path = route.path;
 	  var name = route.name;
-	  {
-	    assert(path != null, "\"path\" is required in a route configuration.");
-	    assert(
-	      typeof route.component !== 'string',
-	      "route config \"component\" for path: " + (String(
-	        path || name
-	      )) + " cannot be a " + "string id. Use an actual component instead."
-	    );
-	  }
 
 	  var pathToRegexpOptions =
 	    route.pathToRegexpOptions || {};
@@ -10201,25 +9219,6 @@ var DevPanel = (function () {
 	  };
 
 	  if (route.children) {
-	    // Warn if route is named, does not redirect and has a default child route.
-	    // If users navigate to this route by name, the default child will
-	    // not be rendered (GH Issue #629)
-	    {
-	      if (
-	        route.name &&
-	        !route.redirect &&
-	        route.children.some(function (child) { return /^\/?$/.test(child.path); })
-	      ) {
-	        warn$1(
-	          false,
-	          "Named Route '" + (route.name) + "' has a default child route. " +
-	            "When navigating to this named route (:to=\"{name: '" + (route.name) + "'\"), " +
-	            "the default child route will not be rendered. Remove the name from " +
-	            "this route and use the name of the default child route for named " +
-	            "links instead."
-	        );
-	      }
-	    }
 	    route.children.forEach(function (child) {
 	      var childMatchAs = matchAs
 	        ? cleanPath((matchAs + "/" + (child.path)))
@@ -10237,14 +9236,6 @@ var DevPanel = (function () {
 	    var aliases = Array.isArray(route.alias) ? route.alias : [route.alias];
 	    for (var i = 0; i < aliases.length; ++i) {
 	      var alias = aliases[i];
-	      if ( alias === path) {
-	        warn$1(
-	          false,
-	          ("Found an alias with the same value as the path: \"" + path + "\". You have to remove that alias. It will be ignored in development.")
-	        );
-	        // skip in dev to make it work
-	        continue
-	      }
 
 	      var aliasRoute = {
 	        path: alias,
@@ -10264,12 +9255,6 @@ var DevPanel = (function () {
 	  if (name) {
 	    if (!nameMap[name]) {
 	      nameMap[name] = record;
-	    } else if ( !matchAs) {
-	      warn$1(
-	        false,
-	        "Duplicate named routes definition: " +
-	          "{ name: \"" + name + "\", path: \"" + (record.path) + "\" }"
-	      );
 	    }
 	  }
 	}
@@ -10279,16 +9264,6 @@ var DevPanel = (function () {
 	  pathToRegexpOptions
 	) {
 	  var regex = pathToRegexp_1(path, [], pathToRegexpOptions);
-	  {
-	    var keys = Object.create(null);
-	    regex.keys.forEach(function (key) {
-	      warn$1(
-	        !keys[key.name],
-	        ("Duplicate param keys in route with path: \"" + path + "\"")
-	      );
-	      keys[key.name] = true;
-	    });
-	  }
 	  return regex
 	}
 
@@ -10330,9 +9305,6 @@ var DevPanel = (function () {
 
 	    if (name) {
 	      var record = nameMap[name];
-	      {
-	        warn$1(record, ("Route with name '" + name + "' does not exist"));
-	      }
 	      if (!record) { return _createRoute(null, location) }
 	      var paramNames = record.regex.keys
 	        .filter(function (key) { return !key.optional; })
@@ -10350,7 +9322,7 @@ var DevPanel = (function () {
 	        }
 	      }
 
-	      location.path = fillParams(record.path, location.params, ("named route \"" + name + "\""));
+	      location.path = fillParams(record.path, location.params);
 	      return _createRoute(record, location, redirectedFrom)
 	    } else if (location.path) {
 	      location.params = {};
@@ -10380,11 +9352,6 @@ var DevPanel = (function () {
 	    }
 
 	    if (!redirect || typeof redirect !== 'object') {
-	      {
-	        warn$1(
-	          false, ("invalid redirect option: " + (JSON.stringify(redirect)))
-	        );
-	      }
 	      return _createRoute(null, location)
 	    }
 
@@ -10401,9 +9368,6 @@ var DevPanel = (function () {
 	    if (name) {
 	      // resolved named direct
 	      var targetRecord = nameMap[name];
-	      {
-	        assert(targetRecord, ("redirect failed: named route \"" + name + "\" not found."));
-	      }
 	      return match({
 	        _normalized: true,
 	        name: name,
@@ -10415,7 +9379,7 @@ var DevPanel = (function () {
 	      // 1. resolve relative redirect
 	      var rawPath = resolveRecordPath(path, record);
 	      // 2. resolve params
-	      var resolvedPath = fillParams(rawPath, params, ("redirect route with path \"" + rawPath + "\""));
+	      var resolvedPath = fillParams(rawPath, params);
 	      // 3. rematch with existing query and hash
 	      return match({
 	        _normalized: true,
@@ -10424,9 +9388,6 @@ var DevPanel = (function () {
 	        hash: hash
 	      }, undefined, location)
 	    } else {
-	      {
-	        warn$1(false, ("invalid redirect option: " + (JSON.stringify(redirect))));
-	      }
 	      return _createRoute(null, location)
 	    }
 	  }
@@ -10436,7 +9397,7 @@ var DevPanel = (function () {
 	    location,
 	    matchAs
 	  ) {
-	    var aliasedPath = fillParams(matchAs, location.params, ("aliased route with path \"" + matchAs + "\""));
+	    var aliasedPath = fillParams(matchAs, location.params);
 	    var aliasedMatch = match({
 	      _normalized: true,
 	      path: aliasedPath
@@ -10562,10 +9523,6 @@ var DevPanel = (function () {
 	    return
 	  }
 
-	  {
-	    assert(typeof behavior === 'function', "scrollBehavior must be a function");
-	  }
-
 	  // wait until re-render finishes before scrolling
 	  router.app.$nextTick(function () {
 	    var position = getScrollPosition();
@@ -10586,9 +9543,6 @@ var DevPanel = (function () {
 	          scrollToPosition((shouldScroll), position);
 	        })
 	        .catch(function (err) {
-	          {
-	            assert(false, err.toString());
-	          }
 	        });
 	    } else {
 	      scrollToPosition(shouldScroll, position);
@@ -10778,7 +9732,6 @@ var DevPanel = (function () {
 
 	        var reject = once$1(function (reason) {
 	          var msg = "Failed to resolve async component " + key + ": " + reason;
-	           warn$1(false, msg);
 	          if (!error) {
 	            error = isError(reason)
 	              ? reason
@@ -11010,7 +9963,6 @@ var DevPanel = (function () {
 	          cb(err);
 	        });
 	      } else {
-	        warn$1(false, 'uncaught error during route navigation:');
 	        console.error(err);
 	      }
 	    }
@@ -11641,10 +10593,6 @@ var DevPanel = (function () {
 	    case 'abstract':
 	      this.history = new AbstractHistory(this, options.base);
 	      break
-	    default:
-	      {
-	        assert(false, ("invalid mode: " + mode));
-	      }
 	  }
 	};
 
@@ -11664,12 +10612,6 @@ var DevPanel = (function () {
 
 	VueRouter.prototype.init = function init (app /* Vue component instance */) {
 	    var this$1 = this;
-
-	   assert(
-	    install.installed,
-	    "not installed. Make sure to call `Vue.use(VueRouter)` " +
-	    "before creating root instance."
-	  );
 
 	  this.apps.push(app);
 
@@ -18429,7 +17371,6 @@ var DevPanel = (function () {
 	  },
 	  methods: {
 	    getEncryptFunction() {
-	      console.log({ enc });
 	      Object.getOwnPropertyNames(enc.__proto__).map(key => {
 	        if (key == 'constructor') return;
 	        let name = key.match(/([a-z0-9]*)/)[1].toUpperCase();
@@ -18587,123 +17528,17 @@ var DevPanel = (function () {
 	const __vue_script__ = script;
 
 	/* template */
-	var __vue_render__ = function() {
-	  var _vm = this;
-	  var _h = _vm.$createElement;
-	  var _c = _vm._self._c || _h;
-	  return _c("div", { staticClass: "encrypt" }, [
-	    _c("div", { staticClass: "box" }, [
-	      _c("div", { staticClass: "name" }, [_vm._v("输入：")]),
-	      _vm._v(" "),
-	      _c("div", [
-	        _c("textarea", {
-	          directives: [
-	            {
-	              name: "model",
-	              rawName: "v-model",
-	              value: _vm.form.input,
-	              expression: "form.input"
-	            }
-	          ],
-	          domProps: { value: _vm.form.input },
-	          on: {
-	            input: function($event) {
-	              if ($event.target.composing) {
-	                return
-	              }
-	              _vm.$set(_vm.form, "input", $event.target.value);
-	            }
-	          }
-	        })
-	      ])
-	    ]),
-	    _vm._v(" "),
-	    _vm.showKey
-	      ? _c("div", { staticClass: "box key" }, [
-	          _c("div", { staticClass: "name" }, [_vm._v("密钥：")]),
-	          _vm._v(" "),
-	          _c("div", [
-	            _c("textarea", {
-	              directives: [
-	                {
-	                  name: "model",
-	                  rawName: "v-model",
-	                  value: _vm.form.key,
-	                  expression: "form.key"
-	                }
-	              ],
-	              domProps: { value: _vm.form.key },
-	              on: {
-	                input: function($event) {
-	                  if ($event.target.composing) {
-	                    return
-	                  }
-	                  _vm.$set(_vm.form, "key", $event.target.value);
-	                }
-	              }
-	            })
-	          ])
-	        ])
-	      : _vm._e(),
-	    _vm._v(" "),
-	    _c(
-	      "div",
-	      _vm._l(_vm.encs, function(item) {
-	        return _c(
-	          "iu-button",
-	          {
-	            key: item.key,
-	            attrs: { color: item.decode ? "error" : "success", size: "mini" },
-	            on: {
-	              click: function($event) {
-	                return _vm.process(item)
-	              }
-	            }
-	          },
-	          [_vm._v(_vm._s(item.name))]
-	        )
-	      }),
-	      1
-	    ),
-	    _vm._v(" "),
-	    _c("div", { staticClass: "box" }, [
-	      _c("div", { staticClass: "name" }, [_vm._v("输出：")]),
-	      _vm._v(" "),
-	      _c("div", [
-	        _c("textarea", {
-	          directives: [
-	            {
-	              name: "model",
-	              rawName: "v-model",
-	              value: _vm.form.output,
-	              expression: "form.output"
-	            }
-	          ],
-	          domProps: { value: _vm.form.output },
-	          on: {
-	            input: function($event) {
-	              if ($event.target.composing) {
-	                return
-	              }
-	              _vm.$set(_vm.form, "output", $event.target.value);
-	            }
-	          }
-	        })
-	      ])
-	    ])
-	  ])
-	};
+	var __vue_render__ = function () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"encrypt"},[_c('div',{staticClass:"box"},[_c('div',{staticClass:"name"},[_vm._v("输入：")]),_vm._v(" "),_c('div',[_c('textarea',{directives:[{name:"model",rawName:"v-model",value:(_vm.form.input),expression:"form.input"}],domProps:{"value":(_vm.form.input)},on:{"input":function($event){if($event.target.composing){ return; }_vm.$set(_vm.form, "input", $event.target.value);}}})])]),_vm._v(" "),(_vm.showKey)?_c('div',{staticClass:"box key"},[_c('div',{staticClass:"name"},[_vm._v("密钥：")]),_vm._v(" "),_c('div',[_c('textarea',{directives:[{name:"model",rawName:"v-model",value:(_vm.form.key),expression:"form.key"}],domProps:{"value":(_vm.form.key)},on:{"input":function($event){if($event.target.composing){ return; }_vm.$set(_vm.form, "key", $event.target.value);}}})])]):_vm._e(),_vm._v(" "),_c('div',_vm._l((_vm.encs),function(item){return _c('iu-button',{key:item.key,attrs:{"color":item.decode?'error':'success',"size":"mini"},on:{"click":function($event){return _vm.process(item)}}},[_vm._v(_vm._s(item.name))])}),1),_vm._v(" "),_c('div',{staticClass:"box"},[_c('div',{staticClass:"name"},[_vm._v("输出：")]),_vm._v(" "),_c('div',[_c('textarea',{directives:[{name:"model",rawName:"v-model",value:(_vm.form.output),expression:"form.output"}],domProps:{"value":(_vm.form.output)},on:{"input":function($event){if($event.target.composing){ return; }_vm.$set(_vm.form, "output", $event.target.value);}}})])])])};
 	var __vue_staticRenderFns__ = [];
-	__vue_render__._withStripped = true;
 
 	  /* style */
 	  const __vue_inject_styles__ = function (inject) {
 	    if (!inject) return
-	    inject("data-v-0de67e6b_0", { source: ".encrypt[data-v-0de67e6b] {\n  max-height: 100%;\n  overflow: auto;\n}\n.encrypt .box textarea[data-v-0de67e6b] {\n  border: 1px solid #ededed;\n  resize: none;\n  width: 100%;\n  height: 100px;\n  margin-bottom: 20px;\n}\n.encrypt .box textarea[data-v-0de67e6b]:focus {\n  outline: none;\n}\n.encrypt .box.key textarea[data-v-0de67e6b] {\n  height: 2.5em;\n  line-height: 1.5;\n}\n.encrypt iu-button[data-v-0de67e6b] {\n  cursor: pointer;\n}\n\n/*# sourceMappingURL=encrypt.vue.map */", map: {"version":3,"sources":["F:\\My_Fun\\ali.git\\crx\\dev-panel\\panel\\pages\\encrypt.vue","encrypt.vue"],"names":[],"mappings":"AA8EA;EACA,gBAAA;EACA,cAAA;AC7EA;AD+EA;EACA,yBAAA;EACA,YAAA;EACA,WAAA;EACA,aAAA;EACA,mBAAA;AC7EA;AD8EA;EACA,aAAA;AC5EA;ADgFA;EACA,aAAA;EACA,gBAAA;AC9EA;ADkFA;EACA,eAAA;AChFA;;AAEA,sCAAsC","file":"encrypt.vue","sourcesContent":["<template>\n  <div class=\"encrypt\">\n    <div class=\"box\">\n      <div class=\"name\">输入：</div>\n      <div>\n        <textarea v-model=\"form.input\"></textarea>\n      </div>\n    </div>\n    <div class=\"box key\" v-if=\"showKey\">\n      <div class=\"name\">密钥：</div>\n      <div>\n        <textarea v-model=\"form.key\"></textarea>\n      </div>\n    </div>\n    <div>\n      <iu-button\n        :color=\"item.decode?'error':'success'\"\n        :key=\"item.key\"\n        @click=\"process(item)\"\n        size=\"mini\"\n        v-for=\"item of encs\"\n      >{{item.name}}</iu-button>\n    </div>\n    <div class=\"box\">\n      <div class=\"name\">输出：</div>\n      <div>\n        <textarea v-model=\"form.output\"></textarea>\n      </div>\n    </div>\n  </div>\n</template>\n<script>\nimport Encrypt from '../utils/encrypt';\nconst enc = new Encrypt();\nexport default {\n  data() {\n    return {\n      encs: [],\n      showKey: false,\n      form: {\n        input: '',\n        key: '',\n        output: ''\n      }\n    };\n  },\n  mounted() {\n    this.getEncryptFunction();\n  },\n  methods: {\n    getEncryptFunction() {\n      console.log({ enc });\n      Object.getOwnPropertyNames(enc.__proto__).map(key => {\n        if (key == 'constructor') return;\n        let name = key.match(/([a-z0-9]*)/)[1].toUpperCase();\n        let decode = false;\n        if (key.match(/_encode$/)) {\n          name += '加密';\n        } else if (key.match(/_decode$/)) {\n          name += '解密';\n          decode = true;\n        }\n        this.encs.push({\n          name,\n          key,\n          decode,\n          needKey: enc[key].length == 2\n        });\n      });\n    },\n    process(item) {\n      this.showKey = item.needKey;\n      this.form.output = enc[item.key](this.form.input, this.form.key);\n    }\n  }\n};\n</script>\n<style lang=\"scss\" scoped>\n.encrypt {\n  max-height: 100%;\n  overflow: auto;\n  .box {\n    textarea {\n      border: 1px solid #ededed;\n      resize: none;\n      width: 100%;\n      height: 100px;\n      margin-bottom: 20px;\n      &:focus {\n        outline: none;\n      }\n    }\n    &.key {\n      textarea {\n        height: 2.5em;\n        line-height: 1.5;\n      }\n    }\n  }\n  iu-button {\n    cursor: pointer;\n  }\n}\n</style>",".encrypt {\n  max-height: 100%;\n  overflow: auto;\n}\n.encrypt .box textarea {\n  border: 1px solid #ededed;\n  resize: none;\n  width: 100%;\n  height: 100px;\n  margin-bottom: 20px;\n}\n.encrypt .box textarea:focus {\n  outline: none;\n}\n.encrypt .box.key textarea {\n  height: 2.5em;\n  line-height: 1.5;\n}\n.encrypt iu-button {\n  cursor: pointer;\n}\n\n/*# sourceMappingURL=encrypt.vue.map */"]}, media: undefined });
+	    inject("data-v-c3b8ded6_0", { source: ".encrypt[data-v-c3b8ded6]{max-height:100%;overflow:auto}.encrypt .box textarea[data-v-c3b8ded6]{border:1px solid #ededed;resize:none;width:100%;height:100px;margin-bottom:20px}.encrypt .box textarea[data-v-c3b8ded6]:focus{outline:0}.encrypt .box.key textarea[data-v-c3b8ded6]{height:2.5em;line-height:1.5}.encrypt iu-button[data-v-c3b8ded6]{cursor:pointer}", map: undefined, media: undefined });
 
 	  };
 	  /* scoped */
-	  const __vue_scope_id__ = "data-v-0de67e6b";
+	  const __vue_scope_id__ = "data-v-c3b8ded6";
 	  /* module identifier */
 	  const __vue_module_identifier__ = undefined;
 	  /* functional template */
@@ -19178,7 +18013,6 @@ var DevPanel = (function () {
 	    form: {
 	      deep: true,
 	      handler() {
-	        console.log(this.form);
 	        this.renderQrcode();
 	      }
 	    }
@@ -19232,14 +18066,12 @@ var DevPanel = (function () {
 	      img.setAttribute('y', (500 - size) / 2);
 	      let canvas = await this.toCanvas(this.photo, size, size);
 	      let url = await this.canvasToDataUrl(canvas);
-	      console.log({ canvas, url });
 	      img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);
 	    },
 	    toCanvas(url, width, height) {
 	      return new Promise((r, j) => {
 	        let img = document.createElement('img');
 	        img.onload = () => {
-	          console.log({ img });
 	          let canvas = document.createElement('canvas');
 	          canvas.width = width || img.width;
 	          canvas.height = height || img.height;
@@ -19305,133 +18137,17 @@ var DevPanel = (function () {
 	const __vue_script__$1 = script$1;
 
 	/* template */
-	var __vue_render__$1 = function() {
-	  var _vm = this;
-	  var _h = _vm.$createElement;
-	  var _c = _vm._self._c || _h;
-	  return _c("div", { staticClass: "qrbox" }, [
-	    _c("div", { staticClass: "container" }, [
-	      _c("div", { ref: "qrcode", staticClass: "qrcode" }),
-	      _vm._v(" "),
-	      _c("div", { staticClass: "options" }, [
-	        _c(
-	          "div",
-	          { staticClass: "form" },
-	          [
-	            _c("div", [_vm._v("容错:")]),
-	            _vm._v(" "),
-	            _c(
-	              "iu-select",
-	              {
-	                attrs: { value: _vm.form.ecl },
-	                on: {
-	                  input: function($event) {
-	                    _vm.form.ecl = $event.detail.value;
-	                  }
-	                }
-	              },
-	              _vm._l(_vm.levels, function(item) {
-	                return _c("iu-option", { key: item, attrs: { value: item } }, [
-	                  _vm._v(_vm._s(item))
-	                ])
-	              }),
-	              1
-	            ),
-	            _vm._v(" "),
-	            _c("div", [_vm._v("LOGO:")]),
-	            _vm._v(" "),
-	            _c(
-	              "label",
-	              {
-	                staticClass: "upload",
-	                style: { "background-image": "url(" + _vm.photo + ")" }
-	              },
-	              [
-	                !_vm.photo
-	                  ? _c("div", { staticClass: "placeholder" }, [
-	                      _vm._v("选择图片")
-	                    ])
-	                  : _vm._e(),
-	                _vm._v(" "),
-	                _c("input", {
-	                  attrs: { type: "file" },
-	                  on: { change: _vm.getPhoto }
-	                })
-	              ]
-	            )
-	          ],
-	          1
-	        ),
-	        _vm._v(" "),
-	        _c(
-	          "div",
-	          { staticClass: "buttons" },
-	          [
-	            _c(
-	              "iu-button",
-	              {
-	                attrs: { color: "success", size: "mini" },
-	                on: {
-	                  click: function($event) {
-	                    return _vm.downloadSVG("svg")
-	                  }
-	                }
-	              },
-	              [_vm._v("导出SVG")]
-	            ),
-	            _vm._v(" "),
-	            _c(
-	              "iu-button",
-	              {
-	                attrs: { color: "success", size: "mini" },
-	                on: {
-	                  click: function($event) {
-	                    return _vm.downloadSVG("png")
-	                  }
-	                }
-	              },
-	              [_vm._v("导出PNG")]
-	            )
-	          ],
-	          1
-	        )
-	      ])
-	    ]),
-	    _vm._v(" "),
-	    _c("div", { staticClass: "text" }, [
-	      _c("textarea", {
-	        directives: [
-	          {
-	            name: "model",
-	            rawName: "v-model",
-	            value: _vm.form.content,
-	            expression: "form.content"
-	          }
-	        ],
-	        domProps: { value: _vm.form.content },
-	        on: {
-	          input: function($event) {
-	            if ($event.target.composing) {
-	              return
-	            }
-	            _vm.$set(_vm.form, "content", $event.target.value);
-	          }
-	        }
-	      })
-	    ])
-	  ])
-	};
+	var __vue_render__$1 = function () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"qrbox"},[_c('div',{staticClass:"container"},[_c('div',{ref:"qrcode",staticClass:"qrcode"}),_vm._v(" "),_c('div',{staticClass:"options"},[_c('div',{staticClass:"form"},[_c('div',[_vm._v("容错:")]),_vm._v(" "),_c('iu-select',{attrs:{"value":_vm.form.ecl},on:{"input":function($event){_vm.form.ecl=$event.detail.value;}}},_vm._l((_vm.levels),function(item){return _c('iu-option',{key:item,attrs:{"value":item}},[_vm._v(_vm._s(item))])}),1),_vm._v(" "),_c('div',[_vm._v("LOGO:")]),_vm._v(" "),_c('label',{staticClass:"upload",style:({'background-image':("url(" + _vm.photo + ")")})},[(!_vm.photo)?_c('div',{staticClass:"placeholder"},[_vm._v("选择图片")]):_vm._e(),_vm._v(" "),_c('input',{attrs:{"type":"file"},on:{"change":_vm.getPhoto}})])],1),_vm._v(" "),_c('div',{staticClass:"buttons"},[_c('iu-button',{attrs:{"color":"success","size":"mini"},on:{"click":function($event){return _vm.downloadSVG('svg')}}},[_vm._v("导出SVG")]),_vm._v(" "),_c('iu-button',{attrs:{"color":"success","size":"mini"},on:{"click":function($event){return _vm.downloadSVG('png')}}},[_vm._v("导出PNG")])],1)])]),_vm._v(" "),_c('div',{staticClass:"text"},[_c('textarea',{directives:[{name:"model",rawName:"v-model",value:(_vm.form.content),expression:"form.content"}],domProps:{"value":(_vm.form.content)},on:{"input":function($event){if($event.target.composing){ return; }_vm.$set(_vm.form, "content", $event.target.value);}}})])])};
 	var __vue_staticRenderFns__$1 = [];
-	__vue_render__$1._withStripped = true;
 
 	  /* style */
 	  const __vue_inject_styles__$1 = function (inject) {
 	    if (!inject) return
-	    inject("data-v-f76c6358_0", { source: ".qrbox[data-v-f76c6358] {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n}\n.qrbox .container[data-v-f76c6358] {\n  display: flex;\n  height: 240px;\n  max-height: 240px;\n  min-height: 240px;\n}\n.qrbox .container .qrcode[data-v-f76c6358] {\n  width: 240px;\n  max-width: 240px;\n  min-width: 240px;\n  height: 240px;\n}\n.qrbox .container .options[data-v-f76c6358] {\n  flex: auto;\n  padding: 0 0 0 20px;\n  display: flex;\n  flex-direction: column;\n}\n.qrbox .container .options .form[data-v-f76c6358] {\n  flex: auto;\n}\n.qrbox .container .options .buttons[data-v-f76c6358] {\n  height: 24px;\n  text-align: right;\n}\n.qrbox .container .options .upload[data-v-f76c6358] {\n  width: 60px;\n  height: 60px;\n  display: block;\n  background-size: cover;\n  background-repeat: no-repeat;\n  background-position: center;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  border: 1px solid #bdbdbd;\n  cursor: pointer;\n}\n.qrbox .container .options .upload input[data-v-f76c6358] {\n  display: none;\n}\n.qrbox .text[data-v-f76c6358] {\n  flex: auto;\n  padding: 5px 0;\n}\n.qrbox .text textarea[data-v-f76c6358] {\n  border: 2px solid #ededed;\n  padding: 1em;\n  resize: none;\n  width: 100%;\n  height: 100%;\n}\n\n/*# sourceMappingURL=qrcode.vue.map */", map: {"version":3,"sources":["F:\\My_Fun\\ali.git\\crx\\dev-panel\\panel\\pages\\qrcode.vue","qrcode.vue"],"names":[],"mappings":"AAiLA;EACA,aAAA;EACA,sBAAA;EACA,YAAA;AChLA;ADiLA;EACA,aAAA;EACA,aAAA;EACA,iBAAA;EACA,iBAAA;AC/KA;ADgLA;EACA,YAAA;EACA,gBAAA;EACA,gBAAA;EACA,aAAA;AC9KA;ADgLA;EACA,UAAA;EACA,mBAAA;EACA,aAAA;EACA,sBAAA;AC9KA;AD+KA;EACA,UAAA;AC7KA;AD+KA;EACA,YAAA;EACA,iBAAA;AC7KA;AD+KA;EACA,WAAA;EACA,YAAA;EACA,cAAA;EACA,sBAAA;EACA,4BAAA;EACA,2BAAA;EACA,aAAA;EACA,uBAAA;EACA,mBAAA;EACA,yBAAA;EACA,eAAA;AC7KA;AD8KA;EACA,aAAA;AC5KA;ADiLA;EACA,UAAA;EACA,cAAA;AC/KA;ADgLA;EACA,yBAAA;EACA,YAAA;EACA,YAAA;EACA,WAAA;EACA,YAAA;AC9KA;;AAEA,qCAAqC","file":"qrcode.vue","sourcesContent":["<template>\n  <div class=\"qrbox\">\n    <div class=\"container\">\n      <div class=\"qrcode\" ref=\"qrcode\"></div>\n      <div class=\"options\">\n        <div class=\"form\">\n          <div>容错:</div>\n          <iu-select :value=\"form.ecl\" @input=\"form.ecl=$event.detail.value\">\n            <iu-option :key=\"item\" :value=\"item\" v-for=\"item of levels\">{{item}}</iu-option>\n          </iu-select>\n          <div>LOGO:</div>\n          <label :style=\"{'background-image':`url(${photo})`}\" class=\"upload\">\n            <div class=\"placeholder\" v-if=\"!photo\">选择图片</div>\n            <input @change=\"getPhoto\" type=\"file\" />\n          </label>\n        </div>\n        <div class=\"buttons\">\n          <iu-button @click=\"downloadSVG('svg')\" color=\"success\" size=\"mini\">导出SVG</iu-button>\n          <iu-button @click=\"downloadSVG('png')\" color=\"success\" size=\"mini\">导出PNG</iu-button>\n        </div>\n      </div>\n    </div>\n    <div class=\"text\">\n      <textarea v-model=\"form.content\"></textarea>\n    </div>\n  </div>\n</template>\n<script>\nimport Qrcode from 'qrcode-svg';\n\nexport default {\n  data() {\n    return {\n      form: {\n        content: '',\n        ecl: 'L'\n      },\n      photo: '',\n      levels: ['L', 'M', 'Q', 'H']\n    };\n  },\n  mounted() {\n    window.rc.getCurrentTabUrl().then(\n      url => {\n        this.form.content = url || '你好';\n      },\n      () => {}\n    );\n  },\n  watch: {\n    form: {\n      deep: true,\n      handler() {\n        console.log(this.form);\n        this.renderQrcode();\n      }\n    }\n  },\n  methods: {\n    renderQrcode() {\n      let svg = new Qrcode(\n        Object.assign(\n          {\n            content: this.form.content,\n            padding: 0,\n            width: 500,\n            height: 500,\n            color: '#000000',\n            background: '#ffffff',\n            join: true,\n            container: 'svg-viewbox'\n          },\n          this.form\n        )\n      ).svg();\n\n      this.$refs.qrcode.innerHTML = svg;\n      this.$refs.qrcode\n        .querySelector('svg')\n        .setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');\n    },\n    getCurrentTab() {},\n    getPhoto(e) {\n      let file = e.target.files[0];\n      if (!file) return;\n      let reader = new FileReader();\n      reader.readAsDataURL(file);\n      reader.onload = () => {\n        this.photo = reader.result;\n        this.setLogo();\n      };\n      e.target.value = '';\n    },\n    async setLogo() {\n      let size = 80;\n      let img = this.$refs.qrcode.querySelector('svg #logo');\n      if (!img) {\n        img = document.createElementNS('http://www.w3.org/2000/svg', 'image');\n        this.$refs.qrcode.querySelector('svg').append(img);\n      }\n      img.setAttribute('id', 'logo');\n      img.setAttribute('width', size);\n      img.setAttribute('height', size);\n      img.setAttribute('x', (500 - size) / 2);\n      img.setAttribute('y', (500 - size) / 2);\n      let canvas = await this.toCanvas(this.photo, size, size);\n      let url = await this.canvasToDataUrl(canvas);\n      console.log({ canvas, url });\n      img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);\n    },\n    toCanvas(url, width, height) {\n      return new Promise((r, j) => {\n        let img = document.createElement('img');\n        img.onload = () => {\n          console.log({ img });\n          let canvas = document.createElement('canvas');\n          canvas.width = width || img.width;\n          canvas.height = height || img.height;\n          let ctx = canvas.getContext('2d');\n          let wrate = canvas.width / img.width;\n          let hrate = canvas.height / img.height;\n          let rate = wrate < hrate ? wrate : hrate;\n\n          let drawWidth = rate * img.width;\n          let drawHeight = rate * img.height;\n\n          ctx.fillStyle = '#ffffff';\n          ctx.fillRect(0, 0, canvas.width, canvas.height);\n\n          ctx.drawImage(\n            img,\n            (canvas.width - drawWidth) / 2,\n            (canvas.height - drawHeight) / 2,\n            drawWidth,\n            drawHeight\n          );\n\n          r(canvas);\n        };\n        img.onerror = j;\n        img.src = url;\n      });\n    },\n    canvasToBlob(canvas) {\n      return new Promise((r, j) => {\n        canvas.toBlob(blob => {\n          r(blob);\n        });\n      });\n    },\n    canvasToDataUrl(canvas) {\n      return new Promise((r, j) => {\n        r(canvas.toDataURL());\n      });\n    },\n    async downloadSVG(type) {\n      let link = '';\n      let svg = this.$refs.qrcode.querySelector('svg').outerHTML;\n\n      if (type == 'svg') {\n        link = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));\n      } else {\n        svg = `data:image/svg+xml;,${encodeURIComponent(svg)}`;\n        let canvas = await this.toCanvas(svg, 500, 500);\n        let blob = await this.canvasToBlob(canvas);\n        link = URL.createObjectURL(blob);\n      }\n\n      let a = document.createElement('a');\n      a.href = link;\n      a.download = `qrcode.${type}`;\n      a.click();\n    }\n  }\n};\n</script>\n<style lang=\"scss\" scoped>\n.qrbox {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  .container {\n    display: flex;\n    height: 240px;\n    max-height: 240px;\n    min-height: 240px;\n    .qrcode {\n      width: 240px;\n      max-width: 240px;\n      min-width: 240px;\n      height: 240px;\n    }\n    .options {\n      flex: auto;\n      padding: 0 0 0 20px;\n      display: flex;\n      flex-direction: column;\n      .form {\n        flex: auto;\n      }\n      .buttons {\n        height: 24px;\n        text-align: right;\n      }\n      .upload {\n        width: 60px;\n        height: 60px;\n        display: block;\n        background-size: cover;\n        background-repeat: no-repeat;\n        background-position: center;\n        display: flex;\n        justify-content: center;\n        align-items: center;\n        border: 1px solid #bdbdbd;\n        cursor: pointer;\n        input {\n          display: none;\n        }\n      }\n    }\n  }\n  .text {\n    flex: auto;\n    padding: 5px 0;\n    textarea {\n      border: 2px solid #ededed;\n      padding: 1em;\n      resize: none;\n      width: 100%;\n      height: 100%;\n    }\n  }\n}\n</style>",".qrbox {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n}\n.qrbox .container {\n  display: flex;\n  height: 240px;\n  max-height: 240px;\n  min-height: 240px;\n}\n.qrbox .container .qrcode {\n  width: 240px;\n  max-width: 240px;\n  min-width: 240px;\n  height: 240px;\n}\n.qrbox .container .options {\n  flex: auto;\n  padding: 0 0 0 20px;\n  display: flex;\n  flex-direction: column;\n}\n.qrbox .container .options .form {\n  flex: auto;\n}\n.qrbox .container .options .buttons {\n  height: 24px;\n  text-align: right;\n}\n.qrbox .container .options .upload {\n  width: 60px;\n  height: 60px;\n  display: block;\n  background-size: cover;\n  background-repeat: no-repeat;\n  background-position: center;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  border: 1px solid #bdbdbd;\n  cursor: pointer;\n}\n.qrbox .container .options .upload input {\n  display: none;\n}\n.qrbox .text {\n  flex: auto;\n  padding: 5px 0;\n}\n.qrbox .text textarea {\n  border: 2px solid #ededed;\n  padding: 1em;\n  resize: none;\n  width: 100%;\n  height: 100%;\n}\n\n/*# sourceMappingURL=qrcode.vue.map */"]}, media: undefined });
+	    inject("data-v-ccf08b50_0", { source: ".qrbox[data-v-ccf08b50]{display:flex;flex-direction:column;height:100%}.qrbox .container[data-v-ccf08b50]{display:flex;height:240px;max-height:240px;min-height:240px}.qrbox .container .qrcode[data-v-ccf08b50]{width:240px;max-width:240px;min-width:240px;height:240px}.qrbox .container .options[data-v-ccf08b50]{flex:auto;padding:0 0 0 20px;display:flex;flex-direction:column}.qrbox .container .options .form[data-v-ccf08b50]{flex:auto}.qrbox .container .options .buttons[data-v-ccf08b50]{height:24px;text-align:right}.qrbox .container .options .upload[data-v-ccf08b50]{width:60px;height:60px;display:block;background-size:cover;background-repeat:no-repeat;background-position:center;display:flex;justify-content:center;align-items:center;border:1px solid #bdbdbd;cursor:pointer}.qrbox .container .options .upload input[data-v-ccf08b50]{display:none}.qrbox .text[data-v-ccf08b50]{flex:auto;padding:5px 0}.qrbox .text textarea[data-v-ccf08b50]{border:2px solid #ededed;padding:1em;resize:none;width:100%;height:100%}", map: undefined, media: undefined });
 
 	  };
 	  /* scoped */
-	  const __vue_scope_id__$1 = "data-v-f76c6358";
+	  const __vue_scope_id__$1 = "data-v-ccf08b50";
 	  /* module identifier */
 	  const __vue_module_identifier__$1 = undefined;
 	  /* functional template */
@@ -19469,9 +18185,6 @@ var DevPanel = (function () {
 	        { path: '/qrcode', component: Pages.Qrcode, name: '二维码' },
 	    ],
 	    onError(e) {
-	        {
-	            console.error(e);
-	        }
 	    }
 	});
 
@@ -19556,105 +18269,18 @@ var DevPanel = (function () {
 	const __vue_script__$2 = script$2;
 
 	/* template */
-	var __vue_render__$2 = function() {
-	  var _vm = this;
-	  var _h = _vm.$createElement;
-	  var _c = _vm._self._c || _h;
-	  return _c(
-	    "div",
-	    { staticClass: "panel-box" },
-	    [
-	      _c(
-	        "iu-layout",
-	        [
-	          _c(
-	            "iu-header",
-	            { staticClass: "header", attrs: { height: "60" } },
-	            [
-	              _c(
-	                "iu-direction",
-	                { attrs: { placement: "bottomLeft" } },
-	                [
-	                  _c("dev-icon", {
-	                    staticClass: "tool-icon",
-	                    attrs: { name: "tool" }
-	                  }),
-	                  _vm._v(" "),
-	                  _c("iu-ripple", { attrs: { dark: "" } }),
-	                  _vm._v(" "),
-	                  _c("div", { attrs: { slot: "content" }, slot: "content" }, [
-	                    _c(
-	                      "div",
-	                      { staticClass: "menu", style: _vm.popoverStyle },
-	                      _vm._l(_vm.menu, function(item) {
-	                        return _c(
-	                          "div",
-	                          {
-	                            staticClass: "menu-item",
-	                            on: {
-	                              click: function($event) {
-	                                return _vm.open(item)
-	                              }
-	                            }
-	                          },
-	                          [
-	                            _c("iu-ripple"),
-	                            _vm._v(" "),
-	                            _c(
-	                              "div",
-	                              { staticClass: "icon" },
-	                              [_c("dev-icon", { attrs: { name: item.icon } })],
-	                              1
-	                            ),
-	                            _vm._v(" "),
-	                            _c("div", { staticClass: "name" }, [
-	                              _vm._v(_vm._s(item.name))
-	                            ])
-	                          ],
-	                          1
-	                        )
-	                      }),
-	                      0
-	                    )
-	                  ])
-	                ],
-	                1
-	              ),
-	              _vm._v(" "),
-	              _c("span", { staticClass: "title" }, [
-	                _vm._v(
-	                  "工具" + _vm._s(_vm.routerName ? ": " + _vm.routerName : "")
-	                )
-	              ])
-	            ],
-	            1
-	          ),
-	          _vm._v(" "),
-	          _c(
-	            "iu-content",
-	            { staticClass: "router-content" },
-	            [_c("router-view")],
-	            1
-	          )
-	        ],
-	        1
-	      )
-	    ],
-	    1
-	  )
-	};
+	var __vue_render__$2 = function () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"panel-box"},[_c('iu-layout',[_c('iu-header',{staticClass:"header",attrs:{"height":"60"}},[_c('iu-direction',{attrs:{"placement":"bottomLeft"}},[_c('dev-icon',{staticClass:"tool-icon",attrs:{"name":"tool"}}),_vm._v(" "),_c('iu-ripple',{attrs:{"dark":""}}),_vm._v(" "),_c('div',{attrs:{"slot":"content"},slot:"content"},[_c('div',{staticClass:"menu",style:(_vm.popoverStyle)},_vm._l((_vm.menu),function(item){return _c('div',{staticClass:"menu-item",on:{"click":function($event){return _vm.open(item)}}},[_c('iu-ripple'),_vm._v(" "),_c('div',{staticClass:"icon"},[_c('dev-icon',{attrs:{"name":item.icon}})],1),_vm._v(" "),_c('div',{staticClass:"name"},[_vm._v(_vm._s(item.name))])],1)}),0)])],1),_vm._v(" "),_c('span',{staticClass:"title"},[_vm._v("工具"+_vm._s(_vm.routerName?(": " + _vm.routerName):''))])],1),_vm._v(" "),_c('iu-content',{staticClass:"router-content"},[_c('router-view')],1)],1)],1)};
 	var __vue_staticRenderFns__$2 = [];
-	__vue_render__$2._withStripped = true;
 
 	  /* style */
 	  const __vue_inject_styles__$2 = function (inject) {
 	    if (!inject) return
-	    inject("data-v-6da06842_0", { source: ".panel-box[data-v-6da06842] {\n  position: fixed;\n  width: 100%;\n  height: 100%;\n  left: 0;\n  top: 0;\n}\n.panel-box .header[data-v-6da06842] {\n  user-select: none;\n  border-bottom: 1px solid #ededed;\n  padding: 10px;\n}\n.panel-box .header .tool-icon[data-v-6da06842] {\n  font-size: 40px;\n  vertical-align: middle;\n  cursor: pointer;\n}\n.panel-box .header .title[data-v-6da06842] {\n  font-size: 20px;\n  line-height: 40px;\n  display: inline-block;\n  margin-left: 10px;\n  vertical-align: middle;\n  max-width: 60%;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.panel-box .header .menu[data-v-6da06842] {\n  background-color: #fff;\n  padding: 10px 0;\n  overflow: auto;\n  box-shadow: 0 10px 10px 0px rgba(0, 0, 0, 0.2);\n  padding: 10px;\n  margin-left: -10px;\n  margin-top: 10px;\n}\n.panel-box .header .menu .menu-item[data-v-6da06842] {\n  display: inline-block;\n  text-align: center;\n  padding: 10px;\n  width: 80px;\n  cursor: pointer;\n  position: relative;\n}\n.panel-box .header .menu .menu-item[data-v-6da06842]:hover {\n  background-color: #f4f4f4;\n}\n.panel-box .header .menu .menu-item .icon[data-v-6da06842] {\n  font-size: 32px;\n}\n.panel-box .header .menu .menu-item .name[data-v-6da06842] {\n  font-size: 12px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n.panel-box .router-content[data-v-6da06842] {\n  overflow-y: auto;\n  padding: 10px;\n}\n\n/*# sourceMappingURL=index.vue.map */", map: {"version":3,"sources":["F:\\My_Fun\\ali.git\\crx\\dev-panel\\panel\\index.vue","index.vue"],"names":[],"mappings":"AA8EA;EACA,eAAA;EACA,WAAA;EACA,YAAA;EACA,OAAA;EACA,MAAA;AC7EA;AD8EA;EACA,iBAAA;EACA,gCAAA;EACA,aAAA;AC5EA;AD6EA;EACA,eAAA;EACA,sBAAA;EACA,eAAA;AC3EA;AD6EA;EACA,eAAA;EACA,iBAAA;EACA,qBAAA;EACA,iBAAA;EACA,sBAAA;EACA,cAAA;EACA,gBAAA;EACA,uBAAA;EACA,mBAAA;AC3EA;AD6EA;EACA,sBAAA;EACA,eAAA;EACA,cAAA;EACA,8CAAA;EACA,aAAA;EACA,kBAAA;EACA,gBAAA;AC3EA;AD4EA;EACA,qBAAA;EACA,kBAAA;EACA,aAAA;EACA,WAAA;EACA,eAAA;EACA,kBAAA;AC1EA;AD2EA;EACA,yBAAA;ACzEA;AD2EA;EACA,eAAA;ACzEA;AD2EA;EACA,eAAA;EACA,gBAAA;EACA,mBAAA;EACA,uBAAA;ACzEA;AD8EA;EACA,gBAAA;EACA,aAAA;AC5EA;;AAEA,oCAAoC","file":"index.vue","sourcesContent":["<template>\n  <div class=\"panel-box\">\n    <iu-layout>\n      <iu-header class=\"header\" height=\"60\">\n        <iu-direction placement=\"bottomLeft\">\n          <dev-icon class=\"tool-icon\" name=\"tool\"></dev-icon>\n          <iu-ripple dark></iu-ripple>\n          <div slot=\"content\">\n            <div :style=\"popoverStyle\" class=\"menu\">\n              <div @click=\"open(item)\" class=\"menu-item\" v-for=\"item of menu\">\n                <iu-ripple></iu-ripple>\n                <div class=\"icon\">\n                  <dev-icon :name=\"item.icon\"></dev-icon>\n                </div>\n                <div class=\"name\">{{item.name}}</div>\n              </div>\n            </div>\n          </div>\n        </iu-direction>\n        <span class=\"title\">工具{{routerName?`: ${routerName}`:''}}</span>\n      </iu-header>\n      <iu-content class=\"router-content\">\n        <router-view></router-view>\n      </iu-content>\n    </iu-layout>\n    <!-- <encrypt /> -->\n  </div>\n</template>\n\n<script>\nexport default {\n  components: {},\n  data() {\n    return {\n      screen: {\n        width: window.innerWidth,\n        height: window.innerHeight - 60\n      },\n      menu: [\n        { path: '/encrypt', name: '加解密', icon: 'encrypt' },\n        { path: '/qrcode', name: '二维码', icon: 'qrcode' }\n      ]\n    };\n  },\n  beforeCreate() {\n    if (localStorage.historyRoutePath) {\n      this.$router.push(localStorage.historyRoutePath);\n    }\n  },\n  beforeMount() {\n    if (!this.$route.name) {\n      this.open(this.menu[0]);\n    }\n    window.addEventListener('resize', () => {\n      this.screen.width = window.innerWidth;\n      this.screen.height = window.innerHeight - 60;\n    });\n  },\n  computed: {\n    popoverStyle() {\n      return {\n        width: this.screen.width + 'px',\n        maxHeight: this.screen.height + 'px'\n      };\n    },\n    routerName() {\n      return this.$route.name;\n    }\n  },\n  methods: {\n    open(item) {\n      this.$router.push(item.path);\n      localStorage.historyRoutePath = item.path;\n    }\n  }\n};\n</script>\n<style lang=\"scss\" scoped>\n.panel-box {\n  position: fixed;\n  width: 100%;\n  height: 100%;\n  left: 0;\n  top: 0;\n  .header {\n    user-select: none;\n    border-bottom: 1px solid #ededed;\n    padding: 10px;\n    .tool-icon {\n      font-size: 40px;\n      vertical-align: middle;\n      cursor: pointer;\n    }\n    .title {\n      font-size: 20px;\n      line-height: 40px;\n      display: inline-block;\n      margin-left: 10px;\n      vertical-align: middle;\n      max-width: 60%;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;\n    }\n    .menu {\n      background-color: #fff;\n      padding: 10px 0;\n      overflow: auto;\n      box-shadow: 0 10px 10px 0px rgba(0, 0, 0, 0.2);\n      padding: 10px;\n      margin-left: -10px;\n      margin-top: 10px;\n      .menu-item {\n        display: inline-block;\n        text-align: center;\n        padding: 10px;\n        width: 80px;\n        cursor: pointer;\n        position: relative;\n        &:hover {\n          background-color: #f4f4f4;\n        }\n        .icon {\n          font-size: 32px;\n        }\n        .name {\n          font-size: 12px;\n          overflow: hidden;\n          white-space: nowrap;\n          text-overflow: ellipsis;\n        }\n      }\n    }\n  }\n  .router-content {\n    overflow-y: auto;\n    padding: 10px;\n  }\n}\n</style>\n<style lang=\"scss\">\nbody {\n  margin: 0;\n}\n* {\n  box-sizing: border-box;\n}\n::-webkit-scrollbar {\n  width: 4px;\n}\n\n::-webkit-scrollbar-thumb {\n  background: transparent;\n  border-radius: 4px;\n}\n\n:hover::-webkit-scrollbar-thumb {\n  background: rgba(136, 136, 136, 0.4);\n}\n\n:hover::-webkit-scrollbar-track {\n  background: rgba(136, 136, 136, 0.1);\n}\n</style>",".panel-box {\n  position: fixed;\n  width: 100%;\n  height: 100%;\n  left: 0;\n  top: 0;\n}\n.panel-box .header {\n  user-select: none;\n  border-bottom: 1px solid #ededed;\n  padding: 10px;\n}\n.panel-box .header .tool-icon {\n  font-size: 40px;\n  vertical-align: middle;\n  cursor: pointer;\n}\n.panel-box .header .title {\n  font-size: 20px;\n  line-height: 40px;\n  display: inline-block;\n  margin-left: 10px;\n  vertical-align: middle;\n  max-width: 60%;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.panel-box .header .menu {\n  background-color: #fff;\n  padding: 10px 0;\n  overflow: auto;\n  box-shadow: 0 10px 10px 0px rgba(0, 0, 0, 0.2);\n  padding: 10px;\n  margin-left: -10px;\n  margin-top: 10px;\n}\n.panel-box .header .menu .menu-item {\n  display: inline-block;\n  text-align: center;\n  padding: 10px;\n  width: 80px;\n  cursor: pointer;\n  position: relative;\n}\n.panel-box .header .menu .menu-item:hover {\n  background-color: #f4f4f4;\n}\n.panel-box .header .menu .menu-item .icon {\n  font-size: 32px;\n}\n.panel-box .header .menu .menu-item .name {\n  font-size: 12px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n}\n.panel-box .router-content {\n  overflow-y: auto;\n  padding: 10px;\n}\n\n/*# sourceMappingURL=index.vue.map */"]}, media: undefined })
-	,inject("data-v-6da06842_1", { source: "body {\n  margin: 0;\n}\n* {\n  box-sizing: border-box;\n}\n::-webkit-scrollbar {\n  width: 4px;\n}\n::-webkit-scrollbar-thumb {\n  background: transparent;\n  border-radius: 4px;\n}\n:hover::-webkit-scrollbar-thumb {\n  background: rgba(136, 136, 136, 0.4);\n}\n:hover::-webkit-scrollbar-track {\n  background: rgba(136, 136, 136, 0.1);\n}\n\n/*# sourceMappingURL=index.vue.map */", map: {"version":3,"sources":["F:\\My_Fun\\ali.git\\crx\\dev-panel\\panel\\index.vue","index.vue"],"names":[],"mappings":"AA6IA;EACA,SAAA;AC5IA;AD8IA;EACA,sBAAA;AC3IA;AD6IA;EACA,UAAA;AC1IA;AD6IA;EACA,uBAAA;EACA,kBAAA;AC1IA;AD6IA;EACA,oCAAA;AC1IA;AD6IA;EACA,oCAAA;AC1IA;;AAEA,oCAAoC","file":"index.vue","sourcesContent":["<template>\n  <div class=\"panel-box\">\n    <iu-layout>\n      <iu-header class=\"header\" height=\"60\">\n        <iu-direction placement=\"bottomLeft\">\n          <dev-icon class=\"tool-icon\" name=\"tool\"></dev-icon>\n          <iu-ripple dark></iu-ripple>\n          <div slot=\"content\">\n            <div :style=\"popoverStyle\" class=\"menu\">\n              <div @click=\"open(item)\" class=\"menu-item\" v-for=\"item of menu\">\n                <iu-ripple></iu-ripple>\n                <div class=\"icon\">\n                  <dev-icon :name=\"item.icon\"></dev-icon>\n                </div>\n                <div class=\"name\">{{item.name}}</div>\n              </div>\n            </div>\n          </div>\n        </iu-direction>\n        <span class=\"title\">工具{{routerName?`: ${routerName}`:''}}</span>\n      </iu-header>\n      <iu-content class=\"router-content\">\n        <router-view></router-view>\n      </iu-content>\n    </iu-layout>\n    <!-- <encrypt /> -->\n  </div>\n</template>\n\n<script>\nexport default {\n  components: {},\n  data() {\n    return {\n      screen: {\n        width: window.innerWidth,\n        height: window.innerHeight - 60\n      },\n      menu: [\n        { path: '/encrypt', name: '加解密', icon: 'encrypt' },\n        { path: '/qrcode', name: '二维码', icon: 'qrcode' }\n      ]\n    };\n  },\n  beforeCreate() {\n    if (localStorage.historyRoutePath) {\n      this.$router.push(localStorage.historyRoutePath);\n    }\n  },\n  beforeMount() {\n    if (!this.$route.name) {\n      this.open(this.menu[0]);\n    }\n    window.addEventListener('resize', () => {\n      this.screen.width = window.innerWidth;\n      this.screen.height = window.innerHeight - 60;\n    });\n  },\n  computed: {\n    popoverStyle() {\n      return {\n        width: this.screen.width + 'px',\n        maxHeight: this.screen.height + 'px'\n      };\n    },\n    routerName() {\n      return this.$route.name;\n    }\n  },\n  methods: {\n    open(item) {\n      this.$router.push(item.path);\n      localStorage.historyRoutePath = item.path;\n    }\n  }\n};\n</script>\n<style lang=\"scss\" scoped>\n.panel-box {\n  position: fixed;\n  width: 100%;\n  height: 100%;\n  left: 0;\n  top: 0;\n  .header {\n    user-select: none;\n    border-bottom: 1px solid #ededed;\n    padding: 10px;\n    .tool-icon {\n      font-size: 40px;\n      vertical-align: middle;\n      cursor: pointer;\n    }\n    .title {\n      font-size: 20px;\n      line-height: 40px;\n      display: inline-block;\n      margin-left: 10px;\n      vertical-align: middle;\n      max-width: 60%;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;\n    }\n    .menu {\n      background-color: #fff;\n      padding: 10px 0;\n      overflow: auto;\n      box-shadow: 0 10px 10px 0px rgba(0, 0, 0, 0.2);\n      padding: 10px;\n      margin-left: -10px;\n      margin-top: 10px;\n      .menu-item {\n        display: inline-block;\n        text-align: center;\n        padding: 10px;\n        width: 80px;\n        cursor: pointer;\n        position: relative;\n        &:hover {\n          background-color: #f4f4f4;\n        }\n        .icon {\n          font-size: 32px;\n        }\n        .name {\n          font-size: 12px;\n          overflow: hidden;\n          white-space: nowrap;\n          text-overflow: ellipsis;\n        }\n      }\n    }\n  }\n  .router-content {\n    overflow-y: auto;\n    padding: 10px;\n  }\n}\n</style>\n<style lang=\"scss\">\nbody {\n  margin: 0;\n}\n* {\n  box-sizing: border-box;\n}\n::-webkit-scrollbar {\n  width: 4px;\n}\n\n::-webkit-scrollbar-thumb {\n  background: transparent;\n  border-radius: 4px;\n}\n\n:hover::-webkit-scrollbar-thumb {\n  background: rgba(136, 136, 136, 0.4);\n}\n\n:hover::-webkit-scrollbar-track {\n  background: rgba(136, 136, 136, 0.1);\n}\n</style>","body {\n  margin: 0;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n::-webkit-scrollbar {\n  width: 4px;\n}\n\n::-webkit-scrollbar-thumb {\n  background: transparent;\n  border-radius: 4px;\n}\n\n:hover::-webkit-scrollbar-thumb {\n  background: rgba(136, 136, 136, 0.4);\n}\n\n:hover::-webkit-scrollbar-track {\n  background: rgba(136, 136, 136, 0.1);\n}\n\n/*# sourceMappingURL=index.vue.map */"]}, media: undefined });
+	    inject("data-v-3274d748_0", { source: ".panel-box[data-v-3274d748]{position:fixed;width:100%;height:100%;left:0;top:0}.panel-box .header[data-v-3274d748]{user-select:none;border-bottom:1px solid #ededed;padding:10px}.panel-box .header .tool-icon[data-v-3274d748]{font-size:40px;vertical-align:middle;cursor:pointer}.panel-box .header .title[data-v-3274d748]{font-size:20px;line-height:40px;display:inline-block;margin-left:10px;vertical-align:middle;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.panel-box .header .menu[data-v-3274d748]{background-color:#fff;padding:10px 0;overflow:auto;box-shadow:0 10px 10px 0 rgba(0,0,0,.2);padding:10px;margin-left:-10px;margin-top:10px}.panel-box .header .menu .menu-item[data-v-3274d748]{display:inline-block;text-align:center;padding:10px;width:80px;cursor:pointer;position:relative}.panel-box .header .menu .menu-item[data-v-3274d748]:hover{background-color:#f4f4f4}.panel-box .header .menu .menu-item .icon[data-v-3274d748]{font-size:32px}.panel-box .header .menu .menu-item .name[data-v-3274d748]{font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.panel-box .router-content[data-v-3274d748]{overflow-y:auto;padding:10px}", map: undefined, media: undefined })
+	,inject("data-v-3274d748_1", { source: "body{margin:0}*{box-sizing:border-box}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:0 0;border-radius:4px}:hover::-webkit-scrollbar-thumb{background:rgba(136,136,136,.4)}:hover::-webkit-scrollbar-track{background:rgba(136,136,136,.1)}", map: undefined, media: undefined });
 
 	  };
 	  /* scoped */
-	  const __vue_scope_id__$2 = "data-v-6da06842";
+	  const __vue_scope_id__$2 = "data-v-3274d748";
 	  /* module identifier */
 	  const __vue_module_identifier__$2 = undefined;
 	  /* functional template */
@@ -19680,9 +18306,9 @@ var DevPanel = (function () {
 
 	var require$$0$1 = "data:image/xml+svg;,%3C%3Fxml%20version%3D%221.0%22%20standalone%3D%22no%22%3F%3E%3C!DOCTYPE%20svg%20PUBLIC%20%22-%2F%2FW3C%2F%2FDTD%20SVG%201.1%2F%2FEN%22%20%22http%3A%2F%2Fwww.w3.org%2FGraphics%2FSVG%2F1.1%2FDTD%2Fsvg11.dtd%22%3E%3Csvg%20t%3D%221590472353245%22%20class%3D%22icon%22%20viewBox%3D%220%200%201024%201024%22%20version%3D%221.1%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20p-id%3D%228531%22%20xmlns%3Axlink%3D%22http%3A%2F%2Fwww.w3.org%2F1999%2Fxlink%22%20width%3D%22128%22%20height%3D%22128%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M409.6%20128c19.2%200%2038.4%2012.8%2051.2%2025.6L512%20230.4c19.2%2012.8%2038.4%2025.6%2057.6%2025.6H960c38.4%200%2064%2025.6%2064%2064v588.8c0%2025.6-25.6%2051.2-64%2051.2H64c-38.4%200-64-19.2-64-51.2V192c0-38.4%2025.6-64%2064-64h345.6z%22%20fill%3D%22%23119CE0%22%20p-id%3D%228532%22%20data-spm-anchor-id%3D%22a313x.7781069.0.i3%22%20class%3D%22%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M371.2%20320H448v64H384c-12.8%200-19.2%200-25.6%206.4-6.4%206.4-6.4%2019.2-6.4%2032v38.4H448v64H352v300.8H275.2V518.4H192v-64h83.2v-32c0-32%206.4-57.6%2025.6-70.4%2019.2-25.6%2038.4-32%2070.4-32z%20m102.4%20140.8h89.6L640%20576l76.8-115.2h89.6l-128%20172.8%20140.8%20192h-89.6L640%20684.8l-96%20140.8H454.4l140.8-192-121.6-172.8z%22%20fill%3D%22%23FFFFFF%22%20p-id%3D%228533%22%20data-spm-anchor-id%3D%22a313x.7781069.0.i4%22%20class%3D%22%22%3E%3C%2Fpath%3E%3C%2Fsvg%3E";
 
-	var require$$1 = "<svg><symbol id=\"icon-qrcode\" viewBox=\"0 0 1024 1024\"><path d=\"M0 0v451.072h466.24V0H0z m382.848 367.68h-299.52V79.616h299.52v288zM0 534.4v451.072h466.24V534.464H0z m382.848 367.744h-299.52V614.016h299.52v288.128zM553.408 0v451.072h466.24V0H553.408z m382.848 367.68h-299.52V79.616h299.52v288zM636.8 985.472H553.408V534.464h253.952v189.504c0 11.392 3.84 11.392 11.392 11.392h113.664V530.56h83.392v284.288h-295.68V610.24H640.64l-3.84 3.84v371.392z\" fill=\"#2ed573\" ></path><path d=\"M723.968 985.472h128.896v-121.28h-128.896zM898.304 985.472h125.12v-121.28h-125.12zM170.56 284.288V163.008H295.68V276.672c0 3.84 0 11.392-7.616 11.392H174.336c0-3.84 0-3.84-3.776-3.84zM170.56 818.752v-121.344h117.504c3.84 0 11.392 0 11.392 7.616v113.728H170.56zM727.744 163.008h125.12v121.28H735.36c-7.616 0-11.392 0-11.392-7.616V166.784s3.84 0 3.84-3.84z\" fill=\"#2ed573\" ></path></symbol><symbol id=\"icon-tool\" viewBox=\"0 0 1024 1024\"><path d=\"M0 21.29A21.333 21.333 0 0 1 21.29 0h418.198C451.264 0 460.8 9.621 460.8 21.29v418.198a21.333 21.333 0 0 1-21.29 21.29H21.29A21.333 21.333 0 0 1 0 439.51V21.291z m0 563.2a21.333 21.333 0 0 1 21.29-21.29h418.198a21.333 21.333 0 0 1 21.29 21.29v418.198a21.333 21.333 0 0 1-21.29 21.29H21.291A21.333 21.333 0 0 1 0 1002.71V584.491z m563.2 0a21.333 21.333 0 0 1 21.29-21.29h418.198a21.333 21.333 0 0 1 21.29 21.29v418.198A21.333 21.333 0 0 1 1002.71 1024H584.491a21.333 21.333 0 0 1-21.291-21.29V584.49z\" fill=\"#2ed573\" ></path><path d=\"M578.283 202.133l187.05-187.05a21.312 21.312 0 0 1 30.166 0l187.05 187.05a21.312 21.312 0 0 1 0 30.166L795.5 419.349a21.312 21.312 0 0 1-30.166 0L578.283 232.3a21.333 21.333 0 0 1 0-30.166z\" fill=\"#7bed9f\" ></path></symbol><symbol id=\"icon-encrypt\" viewBox=\"0 0 1024 1024\"><path d=\"M409.6 128c19.2 0 38.4 12.8 51.2 25.6L512 230.4c19.2 12.8 38.4 25.6 57.6 25.6H960c38.4 0 64 25.6 64 64v588.8c0 25.6-25.6 51.2-64 51.2H64c-38.4 0-64-19.2-64-51.2V192c0-38.4 25.6-64 64-64h345.6z\" fill=\"#2ed573\" ></path><path d=\"M371.2 320H448v64H384c-12.8 0-19.2 0-25.6 6.4-6.4 6.4-6.4 19.2-6.4 32v38.4H448v64H352v300.8H275.2V518.4H192v-64h83.2v-32c0-32 6.4-57.6 25.6-70.4 19.2-25.6 38.4-32 70.4-32z m102.4 140.8h89.6L640 576l76.8-115.2h89.6l-128 172.8 140.8 192h-89.6L640 684.8l-96 140.8H454.4l140.8-192-121.6-172.8z\" fill=\"#FFFFFF\" ></path></symbol></svg>";
+	var require$$1 = "<svg><symbol id=\"icon-dictionary\" viewBox=\"0 0 1024 1024\"><path d=\"M437.677419 206.451613c1.651613-37.987097-29.729032-82.580645-47.896774-82.580645H47.896774c-34.683871 28.077419-33.032258 82.580645-33.032258 82.580645h422.812903z\" fill=\"#ECC049\" ></path><path d=\"M18.167742 204.8L16.516129 772.954839c0 62.76129 62.76129 127.174194 125.522581 127.174193h739.92258c62.76129 0 125.522581-62.76129 125.522581-127.174193V333.625806c0-62.76129-62.76129-127.174194-125.522581-127.174193H520.258065l-502.090323-1.651613z\" fill=\"#FFD658\" ></path></symbol><symbol id=\"icon-file\" viewBox=\"0 0 1024 1024\"><path d=\"M751.801 11.57H210.932a74.804 74.804 0 0 0-74.572 74.573v851.714a74.804 74.804 0 0 0 74.572 74.572h708.701a74.804 74.804 0 0 0 74.573-74.572V254.033z\" fill=\"#E4F9F4\" ></path><path d=\"M751.801 179.345a74.862 74.862 0 0 0 74.573 74.63h167.774L751.8 11.571z\" fill=\"#6BDDC7\" ></path><path d=\"M87.647 624.814h569.854q69.423 0 69.423 69.423v185.13q0 69.424-69.423 69.424H87.647q-69.423 0-69.423-69.424v-185.13q0-69.423 69.423-69.423z\" fill=\"#38D6B8\" ></path></symbol><symbol id=\"icon-unknow\" viewBox=\"0 0 1024 1024\"><path d=\"M699.72511137 6.00222832h-544.74747831c-41.36598274 0-75.15720651 33.79228916-75.15720522 75.1582719v857.61228654c0 41.36598274 33.79228916 75.15827189 75.15720522 75.15827191h713.70679465c41.36598274 0 75.15720651-33.79228916 75.1572052-75.15827191V250.11874985L699.72511137 6.00222832z\" fill=\"#EFEFEF\" ></path><path d=\"M699.72511137 174.96154334c0 41.36598274 33.79228916 75.15720651 75.15827192 75.15720651H943.84163291L699.72511137 6.00222832v168.95931502z\" fill=\"#D8D8D8\" ></path><path d=\"M450.44330319 548.41696163c-2.33061292-11.65199918-1.74769269-22.72107812 1.74769268-32.04353108 2.91353314-9.32138626 7.57475898-18.06091899 13.40075856-25.63461126a164.22242732 164.22242732 0 0 1 19.22675815-20.97445084c7.57369227-6.40891982 13.98154669-12.81783833 20.39153061-19.22675684s11.65199918-12.81783833 15.72924066-19.22675815c4.0793723-6.40785311 6.40998522-13.39969187 6.40998393-20.97338543 0-12.81783833-4.07830689-22.72214481-12.81783834-30.29690249-8.73846603-7.57369227-20.39153189-11.65199918-35.53998186-11.65199918-12.2338527 0-23.30399834 2.33061292-33.20830483 7.57369227-9.90537188 4.66122582-19.22675814 11.65306458-27.96628958 19.80967837l-33.20937024-32.04459648c12.2349194-13.39969187 26.80151583-23.88691858 43.11367544-32.62645 16.313225-8.1566125 34.95706293-12.81783833 55.93151505-12.81783833 14.56553232 0 28.5492098 1.74769269 40.78306251 5.24307936 12.81783833 3.49645207 23.30506375 9.32245166 32.62645001 16.3142904 9.32245166 6.99077334 16.313225 15.73030478 20.97445084 26.21753149 5.24307936 10.48722542 7.57369227 22.13922459 7.57369227 36.12290208 0 11.06907894-2.32954751 20.97338543-6.40785312 29.71291817-4.66122582 8.73846603-9.90537188 16.89614524-16.313225 23.88798268-6.40891982 6.99077334-13.98367749 13.98154669-20.97445083 20.97338542-7.57475898 6.40891982-13.98261209 13.40075856-20.39153191 20.39153191-5.82706499 6.99183874-10.48722542 14.56553232-14.56553102 22.72214353-3.49538667 8.1566125-4.66122582 17.47906417-3.49538667 27.96629088h-53.01904731v0.58185352z m-16.313225 86.81027107c0-13.98154669 4.07830689-25.05275773 13.40075856-33.79228917 8.73846603-8.15554709 19.80861168-12.81677293 32.62645-12.81677293 12.81783833 0 23.88691858 4.07830689 32.62645001 12.81783834 8.73846603 8.1566125 13.39969187 19.80861168 13.39969186 33.79228916 0 14.56446562-4.66016044 25.63461125-13.39969186 34.374144-8.73846603 8.73846603-19.80861168 12.81677293-32.62645001 12.81677292-12.81783833 0-23.88798398-4.07830689-32.62645-12.81677292-8.73953274-8.73953274-13.40075856-20.39259731-13.40075856-34.3752094z\" fill=\"#D8D8D8\" ></path></symbol><symbol id=\"icon-qrcode\" viewBox=\"0 0 1024 1024\"><path d=\"M32 32v422.88h437.1V32H32z m358.92 344.7h-280.8V106.64h280.8v270zM32 533v422.88h437.1V533.06H32z m358.92 344.76h-280.8V607.64h280.8v270.12zM550.82 32v422.88h437.1V32H550.82z m358.92 344.7h-280.8V106.64h280.8v270zM629 955.88H550.82V533.06h238.08v177.66c0 10.68 3.6 10.68 10.68 10.68h106.56V529.4h78.18v266.52h-277.2V604.1H632.6l-3.6 3.6v348.18z\" fill=\"#2ed573\" ></path><path d=\"M710.72 955.88h120.84v-113.7h-120.84zM874.16 955.88h117.3v-113.7h-117.3zM191.9 298.52V184.82H309.2V291.38c0 3.6 0 10.68-7.14 10.68H195.44c0-3.6 0-3.6-3.54-3.6zM191.9 799.58v-113.76h110.16c3.6 0 10.68 0 10.68 7.14v106.62H191.9zM714.26 184.82h117.3v113.7H721.4c-7.14 0-10.68 0-10.68-7.14V188.36s3.6 0 3.6-3.6z\" fill=\"#2ed573\" ></path></symbol><symbol id=\"icon-tool\" viewBox=\"0 0 1024 1024\"><path d=\"M32 51.959375A19.9996875 19.9996875 0 0 1 51.959375 32h392.060625C455.06 32 464 41.0196875 464 51.959375v392.060625a19.9996875 19.9996875 0 0 1-19.959375 19.959375H51.959375A19.9996875 19.9996875 0 0 1 32 444.040625V51.9603125z m0 528a19.9996875 19.9996875 0 0 1 19.959375-19.959375h392.060625a19.9996875 19.9996875 0 0 1 19.959375 19.959375v392.060625a19.9996875 19.9996875 0 0 1-19.959375 19.959375H51.9603125A19.9996875 19.9996875 0 0 1 32 972.040625V579.9603125z m528 0a19.9996875 19.9996875 0 0 1 19.959375-19.959375h392.060625a19.9996875 19.9996875 0 0 1 19.959375 19.959375v392.060625A19.9996875 19.9996875 0 0 1 972.040625 992H579.9603125a19.9996875 19.9996875 0 0 1-19.9603125-19.959375V579.959375z\" fill=\"#2ed573\" ></path><path d=\"M574.1403125 221.4996875l175.359375-175.359375a19.98 19.98 0 0 1 28.280625 0l175.359375 175.359375a19.98 19.98 0 0 1 0 28.280625L777.78125 425.1396875a19.98 19.98 0 0 1-28.280625 0L574.1403125 249.78125a19.9996875 19.9996875 0 0 1 0-28.280625z\" fill=\"#7bed9f\" ></path></symbol><symbol id=\"icon-encrypt\" viewBox=\"0 0 1024 1024\"><path d=\"M416 152c18 0 36 12 48 24L512 248c18 12 36 24 54 24H932c36 0 60 24 60 60v552c0 24-24 48-60 48H92c-36 0-60-18-60-48V212c0-36 24-60 60-60h324z\" fill=\"#2ed573\" ></path><path d=\"M380 332H452v60H392c-12 0-18 0-24 6-6 6-6 18-6 30v36H452v60H362v282H290V518H212v-60h78v-30c0-30 6-54 24-66 18-24 36-30 66-30z m96 132h84L632 572l72-108h84l-120 162 132 180h-84L632 674l-90 132H458l132-180-114-162z\" fill=\"#FFFFFF\" ></path></symbol></svg>";
 
-	var require$$2 = "<?xml version=\"1.0\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 1024 1024\" version=\"1.1\"\n    width=\"128\" height=\"128\">\n    <defs>\n        <style type=\"text/css\" />\n        </defs>\n    <path d=\"M751.801 11.57H210.932a74.804 74.804 0 0 0-74.572 74.573v851.714a74.804 74.804 0 0 0 74.572 74.572h708.701a74.804 74.804 0 0 0 74.573-74.572V254.033z\" fill=\"#E4F9F4\" class=\"background\"/>\n    <path d=\"M751.801 179.345a74.862 74.862 0 0 0 74.573 74.63h167.774L751.8 11.571z\" fill=\"#6BDDC7\" class=\"edge\">\n    </path>\n    <path xmlns=\"http://www.w3.org/2000/svg\" d=\"M87.647 624.814h569.854q69.423 0 69.423 69.423v185.13q0 69.424-69.423 69.424H87.647q-69.423 0-69.423-69.424v-185.13q0-69.423 69.423-69.423z\" fill=\"#38D6B8\" class=\"board\"/>\n    <text xmlns=\"http://www.w3.org/2000/svg\" style=\"fill:#fff;font-size: 200px;vertical-align: middle;\" x=\"360\" y=\"800\" text-anchor=\"middle\" dominant-baseline=\"middle\" class=\"text\">你好</text>\n</svg>";
+	var require$$2 = "<?xml version=\"1.0\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 1024 1024\" version=\"1.1\"\n    width=\"128\" height=\"128\">\n    <path\n        d=\"M751.801 11.57H210.932a74.804 74.804 0 0 0-74.572 74.573v851.714a74.804 74.804 0 0 0 74.572 74.572h708.701a74.804 74.804 0 0 0 74.573-74.572V254.033z\"\n        fill=\"#E4F9F4\" class=\"background\" />\n    <path d=\"M751.801 179.345a74.862 74.862 0 0 0 74.573 74.63h167.774L751.8 11.571z\" fill=\"#6BDDC7\" class=\"edge\" />\n    <path\n        d=\"M87.647 624.814h569.854q69.423 0 69.423 69.423v185.13q0 69.424-69.423 69.424H87.647q-69.423 0-69.423-69.424v-185.13q0-69.423 69.423-69.423z\"\n        fill=\"#38D6B8\" class=\"board\" />\n    <text style=\"fill:#fff;font-size: 200px;vertical-align: middle;\" x=\"360\" y=\"800\" text-anchor=\"middle\"\n        dominant-baseline=\"middle\" class=\"text\">HTML</text>\n</svg>";
 
 	var Assets = {
 	    images: {
@@ -19698,10 +18324,6 @@ var DevPanel = (function () {
 	    /^iu-/
 	];
 	Vue.config.errorHandler = function (err, vm, info) {
-	    {
-	        console.error(err);
-	        console.error(info);
-	    }
 	};
 
 	window.addEventListener('unhandledrejection', e => e.preventDefault());
